@@ -46,4 +46,4 @@ jobs:
           name: lfdockia-community-repo-${{ github.sha }}
           path: target/alfdockia-community-repo*.jar
           if-no-files-found: error
-          retention-days: 190
+          retention-days: 30
