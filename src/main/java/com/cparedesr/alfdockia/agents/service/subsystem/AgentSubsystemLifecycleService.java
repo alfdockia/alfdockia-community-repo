@@ -26,12 +26,13 @@ import java.util.Set;
 public class AgentSubsystemLifecycleService implements SmartLifecycle {
 
     private static final Log LOGGER = LogFactory.getLog(AgentSubsystemLifecycleService.class);
-    private static final String STARTUP_BANNER = String.join(System.lineSeparator(),
-            "",
+    private static final List<String> STARTUP_BANNER = List.of(
             "==============================================================",
-            "                         Alfdockia",
-            "            Integracion nativa de Alfresco con Docker",
-            " Copyright (c) 2026 cparedes. Todos los derechos reservados.",
+            "                          Alfdockia",
+            "          Integracion nativa de Alfresco con Docker",
+            "",
+            "                 Copyright (c) 2026 Alfdockia",
+            "                Todos los derechos reservados.",
             "==============================================================");
 
     private AgentRegistryService registryService;
@@ -58,7 +59,7 @@ public class AgentSubsystemLifecycleService implements SmartLifecycle {
             return;
         }
 
-        LOGGER.info(STARTUP_BANNER);
+        STARTUP_BANNER.forEach(LOGGER::info);
 
         if (!isStartAgentsOnStart()) {
             running = true;
