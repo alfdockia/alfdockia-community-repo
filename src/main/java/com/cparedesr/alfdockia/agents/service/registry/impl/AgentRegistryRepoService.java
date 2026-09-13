@@ -66,72 +66,54 @@ public class AgentRegistryRepoService implements AgentRegistryService {
 
     @Override
     public boolean existsByName(String name) {
-        ResultSet rs = null;
-        try {
-            SearchParameters sp = new SearchParameters();
-            sp.setLanguage(SearchService.LANGUAGE_FTS_ALFRESCO);
-            sp.addStore(StoreRef.STORE_REF_WORKSPACE_SPACESSTORE);
-            sp.setQuery(AGENT_TYPE_QUERY + " AND =alfdockia:name:\"" + escape(name) + "\"");
-            rs = searchService.query(sp);
-            return rs != null && rs.length() > 0;
-        } finally {
-            if (rs != null) rs.close();
+        for (NodeRef node : registeredNodes()) {
+            if (Objects.equals(name, nodeService.getProperty(node, PROP_NAME))) return true;
         }
+        return false;
     }
 
     @Override
     public int countAgentsUpTo(int limit) {
-        // The quota is global, including agents the caller cannot see.
-        return AuthenticationUtil.runAsSystem(() -> countRegisteredAgentsUpTo(limit));
-    }
-
-    private int countRegisteredAgentsUpTo(int limit) {
-        int safeLimit = Math.max(0, limit);
-        if (safeLimit == 0) {
-            return 0;
-        }
-
-        NodeRef folder = ensureRegistryFolder();
-        int count = 0;
-        for (FileInfo child : fileFolderService.list(folder)) {
-            if (TYPE_AGENT.equals(nodeService.getType(child.getNodeRef()))) {
-                count++;
-                if (count >= safeLimit) {
-                    return count;
-                }
-            }
-        }
-        return count;
+        return AuthenticationUtil.runAsSystem(() -> Math.min(Math.max(0, limit), registeredNodes().size()));
     }
 
     @Override
     public List<String> listRegisteredContainerIds() {
-        return AuthenticationUtil.runAsSystem(() -> {
-            List<String> ids = new ArrayList<>();
-            for (FileInfo child : fileFolderService.list(ensureRegistryFolder())) {
-                if (TYPE_AGENT.equals(nodeService.getType(child.getNodeRef()))) {
-                    String id = toStr(nodeService.getProperty(child.getNodeRef(), PROP_CONTAINER));
-                    if (id != null && !id.isBlank()) ids.add(id.trim());
-                }
-            }
-            return ids;
-        });
+        List<String> ids = new ArrayList<>();
+        for (AgentRuntimeInfo info : listLicenseRuntimeInfos()) {
+            if (info.getContainerId() != null && !info.getContainerId().isBlank()) ids.add(info.getContainerId());
+        }
+        return ids;
     }
 
     @Override
     public List<AgentRuntimeInfo> listLicenseRuntimeInfos() {
         return AuthenticationUtil.runAsSystem(() -> {
             List<AgentRuntimeInfo> result = new ArrayList<>();
-            for (FileInfo child : fileFolderService.list(getDataDictionary())) {
-                if (!child.isFolder() || !"Alfdockia Agents".equals(child.getName())) continue;
-                for (FileInfo agent : fileFolderService.list(child.getNodeRef())) {
-                    if (TYPE_AGENT.equals(nodeService.getType(agent.getNodeRef()))) {
-                        result.add(mapRuntimeInfo(agent.getNodeRef()));
-                    }
-                }
-            }
+            for (NodeRef node : registeredNodes()) result.add(mapRuntimeInfo(node));
             return result;
         });
+    }
+
+    private List<NodeRef> registeredNodes() {
+        List<NodeRef> result = new ArrayList<>();
+        for (FileInfo child : fileFolderService.list(getDataDictionary())) {
+            if (!child.isFolder() || !"Alfdockia Agents".equals(child.getName())) continue;
+            for (FileInfo agent : fileFolderService.list(child.getNodeRef())) {
+                if (TYPE_AGENT.equals(nodeService.getType(agent.getNodeRef()))) result.add(agent.getNodeRef());
+            }
+        }
+        result.sort(Comparator.comparing(NodeRef::getId));
+        return result;
+    }
+
+    @Override
+    public void updateRuntimeState(AgentRuntimeInfo runtime, String currentState) {
+        NodeRef node = new NodeRef(StoreRef.STORE_REF_WORKSPACE_SPACESSTORE, runtime.getNodeId());
+        if (nodeService.exists(node)) {
+            nodeService.setProperty(node, PROP_CURRENT, currentState);
+            nodeService.setProperty(node, PROP_UPDATED, new Date());
+        }
     }
 
     @Override
@@ -227,31 +209,13 @@ public class AgentRegistryRepoService implements AgentRegistryService {
     @Override
     public List<AgentSummary> listAgents(int skipCount, int maxItems) {
         int safeSkip = Math.max(0, skipCount);
-        int safeMax = (maxItems <= 0) ? 100 : Math.min(maxItems, 500);
-
-        ResultSet rs = null;
-        try {
-            String folderPathQuery = buildRegistryFolderPathQuery();
-
-            SearchParameters sp = new SearchParameters();
-            sp.setLanguage(SearchService.LANGUAGE_FTS_ALFRESCO);
-            sp.addStore(StoreRef.STORE_REF_WORKSPACE_SPACESSTORE);
-            sp.setQuery(AGENT_TYPE_QUERY + " AND PATH:\"" + folderPathQuery + "/*\"");
-            sp.setSkipCount(safeSkip);
-            sp.setMaxItems(safeMax);
-
-            rs = searchService.query(sp);
-            if (rs == null || rs.length() == 0) return Collections.emptyList();
-
-            List<AgentSummary> out = new ArrayList<>(rs.length());
-            for (int i = 0; i < rs.length(); i++) {
-                out.add(mapSummary(rs.getNodeRef(i)));
-            }
-            return out;
-
-        } finally {
-            if (rs != null) rs.close();
+        int safeMax = maxItems <= 0 ? 100 : Math.min(maxItems, 500);
+        List<NodeRef> nodes = registeredNodes();
+        List<AgentSummary> result = new ArrayList<>();
+        for (int i = Math.min(safeSkip, nodes.size()); i < nodes.size() && result.size() < safeMax; i++) {
+            result.add(mapSummary(nodes.get(i)));
         }
+        return result;
     }
 
     @Override
@@ -371,22 +335,10 @@ public class AgentRegistryRepoService implements AgentRegistryService {
             throw new BadRequestException("ID_REQUIRED", "Agent id is required");
         }
 
-        ResultSet rs = null;
-        try {
-            SearchParameters sp = new SearchParameters();
-            sp.setLanguage(SearchService.LANGUAGE_FTS_ALFRESCO);
-            sp.addStore(StoreRef.STORE_REF_WORKSPACE_SPACESSTORE);
-            sp.setQuery(AGENT_TYPE_QUERY + " AND =alfdockia:agentId:\"" + escape(agentId.trim()) + "\"");
-
-            rs = searchService.query(sp);
-            if (rs == null || rs.length() == 0) {
-                throw new BadRequestException("NOT_FOUND", "Agent not found: " + agentId);
-            }
-            return rs.getNodeRef(0);
-
-        } finally {
-            if (rs != null) rs.close();
+        for (NodeRef node : registeredNodes()) {
+            if (agentId.trim().equals(toStr(nodeService.getProperty(node, PROP_AGENT_ID)))) return node;
         }
+        throw new BadRequestException("NOT_FOUND", "Agent not found in Alfresco: " + agentId);
     }
 
     // ---------------- helpers de carpeta de registro ----------------

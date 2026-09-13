@@ -102,20 +102,21 @@ public class LicenseRuntimeEnforcementServiceTest {
         when(license.getStatus()).thenReturn(limit(-1));
         service.enforce();
         service.assertCanRun("agent-10");
-        verifyNoInteractions(docker);
+        verify(docker, never()).stop(anyString(), anyInt());
     }
 
-    @Test public void dockerOnlyContainersAreIncludedWhenRegistryIsEmpty() {
+    @Test public void dockerOnlyContainersAreNeverManaged() {
         when(registry.listLicenseRuntimeInfos()).thenReturn(List.of());
         service.enforce();
-        verify(docker, times(5)).stop(anyString(), eq(10));
+        verifyNoInteractions(docker);
         verify(registry, never()).markLicenseStopped(any());
     }
 
-    @Test public void repositoryFailureStillStopsDockerExcessButBlocksApiStart() {
+    @Test public void repositoryFailureNeverFallsBackToDocker() {
         when(registry.listLicenseRuntimeInfos()).thenThrow(new IllegalStateException("offline"));
-        service.enforce();
-        verify(docker, times(5)).stop(anyString(), eq(10));
+        try { service.enforce(); fail("Must fail closed"); }
+        catch (IllegalStateException expected) { }
+        verifyNoInteractions(docker);
         try { service.assertCanRun("agent-1"); fail("Unknown inventory must block start"); }
         catch (IllegalStateException expected) { }
     }
@@ -133,11 +134,15 @@ public class LicenseRuntimeEnforcementServiceTest {
         verify(registry, times(4)).markLicenseStopped(any());
     }
 
-    @Test public void alreadyStoppedExcessIsNotStoppedRepeatedly() {
+    @Test public void stoppedMetadataIsEnforcedWithoutDockerDiscovery() {
         for (AgentRuntimeInfo info : containers) info.setCurrentState("stopped");
-        for (AgentRuntimeInfo info : registered) info.setDesiredState("stopped");
+        for (AgentRuntimeInfo info : registered) {
+            info.setDesiredState("stopped");
+            info.setCurrentState("stopped");
+        }
         service.enforce();
-        verify(docker, never()).stop(anyString(), anyInt());
+        verify(docker, times(10)).stop(anyString(), eq(10));
+        verify(docker, never()).listManagedRuntimeInfos();
         verify(registry, never()).markLicenseStopped(any());
     }
 }

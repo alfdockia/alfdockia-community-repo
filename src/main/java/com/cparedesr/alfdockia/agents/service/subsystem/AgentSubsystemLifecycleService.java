@@ -13,13 +13,8 @@ import org.apache.commons.logging.LogFactory;
 import org.alfresco.repo.security.authentication.AuthenticationUtil;
 import org.springframework.context.SmartLifecycle;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 
 /**
  * Coordina el arranque y la parada de los runtimes cuando Alfresco inicia o
@@ -45,7 +40,6 @@ public class AgentSubsystemLifecycleService implements SmartLifecycle {
     private DockerService dockerService;
     private Properties globalProperties;
     private volatile boolean running;
-    private final Set<String> knownContainerIds = new LinkedHashSet<>();
 
     public void setRegistryService(AgentRegistryService registryService) {
         this.registryService = registryService;
@@ -74,8 +68,8 @@ public class AgentSubsystemLifecycleService implements SmartLifecycle {
             return;
         }
 
-        List<AgentRuntimeInfo> runtimes = loadAllRuntimeInfos();
-        String startupMessage = "[Alfdockia] Subsistema inicializado. Contenedores administrados encontrados: "
+        List<AgentRuntimeInfo> runtimes = loadRuntimeInfos();
+        String startupMessage = "[Alfdockia] Subsistema inicializado. Agentes registrados en Alfresco: "
                 + runtimes.size();
         LOGGER.info(startupMessage);
         for (AgentRuntimeInfo runtime : runtimes) {
@@ -90,8 +84,8 @@ public class AgentSubsystemLifecycleService implements SmartLifecycle {
 
             try {
                 licenseEnforcement.assertCanRun(containerId);
-                knownContainerIds.add(containerId);
                 dockerService.start(containerId);
+                licenseEnforcement.updateRuntimeState(runtime, "running");
                 LOGGER.info("Agente " + runtime.getAgentId() + " arrancado al iniciar el subsistema");
             } catch (RuntimeException e) {
                 if (e instanceof BadRequestException
@@ -123,8 +117,8 @@ public class AgentSubsystemLifecycleService implements SmartLifecycle {
         }
 
         int timeout = getStopTimeoutSeconds();
-        List<AgentRuntimeInfo> runtimes = loadAllRuntimeInfos();
-        String shutdownMessage = "[Alfdockia] Deteniendo el subsistema. Contenedores administrados encontrados: "
+        List<AgentRuntimeInfo> runtimes = loadRuntimeInfos();
+        String shutdownMessage = "[Alfdockia] Deteniendo el subsistema. Agentes registrados en Alfresco: "
                 + runtimes.size();
         LOGGER.info(shutdownMessage);
         for (AgentRuntimeInfo runtime : runtimes) {
@@ -135,6 +129,7 @@ public class AgentSubsystemLifecycleService implements SmartLifecycle {
 
             try {
                 dockerService.stop(containerId, timeout);
+                licenseEnforcement.updateRuntimeState(runtime, "stopped");
                 LOGGER.info("Agente " + runtime.getAgentId() + " parado al detener el subsistema");
             } catch (RuntimeException e) {
                 LOGGER.warn("No se pudo parar el agente " + runtime.getAgentId()
@@ -174,7 +169,7 @@ public class AgentSubsystemLifecycleService implements SmartLifecycle {
             return AuthenticationUtil.runAsSystem(() -> registryService.listRuntimeInfos());
         } catch (RuntimeException e) {
             LOGGER.info("Registro de agentes de Alfdockia no disponible durante el ciclo de vida del subsistema; "
-                    + "se continuara sin nodos de registro y se usaran los contenedores conocidos o descubiertos en Docker. "
+                    + "no se operara ningun contenedor sin poder leer su registro en Alfresco. "
                     + "Causa: " + e.getClass().getSimpleName() + ": " + e.getMessage());
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Detalle tecnico al leer el registro de agentes de Alfdockia", e);
@@ -183,45 +178,9 @@ public class AgentSubsystemLifecycleService implements SmartLifecycle {
         }
     }
 
-    private List<AgentRuntimeInfo> loadAllRuntimeInfos() {
-        Map<String, AgentRuntimeInfo> runtimesByContainer = new LinkedHashMap<>();
-        for (AgentRuntimeInfo runtime : loadRuntimeInfos()) {
-            addRuntime(runtimesByContainer, runtime);
-        }
-
-        for (String containerId : knownContainerIds) {
-            addRuntime(runtimesByContainer, runtimeFromContainerId(containerId));
-        }
-
-        try {
-            for (String containerId : dockerService.listManagedContainerIds()) {
-                addRuntime(runtimesByContainer, runtimeFromContainerId(containerId));
-            }
-        } catch (RuntimeException e) {
-            LOGGER.warn("No se pudieron descubrir en Docker los contenedores administrados por Alfdockia", e);
-        }
-
-        knownContainerIds.addAll(runtimesByContainer.keySet());
-        return new ArrayList<>(runtimesByContainer.values());
-    }
-
-    private void addRuntime(Map<String, AgentRuntimeInfo> runtimesByContainer, AgentRuntimeInfo runtime) {
-        if (runtime == null) return;
-        String containerId = normalize(runtime.getContainerId());
-        if (containerId == null) return;
-        runtimesByContainer.putIfAbsent(containerId, runtime);
-    }
-
-    private AgentRuntimeInfo runtimeFromContainerId(String containerId) {
-        AgentRuntimeInfo info = new AgentRuntimeInfo();
-        info.setAgentId(containerId);
-        info.setContainerId(containerId);
-        return info;
-    }
-
     private boolean shouldStart(AgentRuntimeInfo runtime) {
         String desiredState = normalize(runtime.getDesiredState());
-        return desiredState == null || "running".equalsIgnoreCase(desiredState);
+        return "running".equalsIgnoreCase(desiredState);
     }
 
     private boolean isStartAgentsOnStart() {

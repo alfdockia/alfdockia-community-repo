@@ -34,7 +34,6 @@
   <bean id="alfdockia.agents.capacityService"
         class="com.cparedesr.alfdockia.agents.service.AgentCapacityService">
     <property name="registryService" ref="alfdockia.agents.registryService"/>
-    <property name="dockerService" ref="alfdockia.agents.dockerService"/>
   </bean>
 
   <bean id="alfdockia.agents.deploymentService"

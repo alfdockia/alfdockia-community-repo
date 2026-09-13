@@ -89,31 +89,31 @@ public class AgentSubsystemLifecycleServiceTest {
     }
 
     @Test
-    public void startsAndStopsContainersDiscoveredDirectlyInDocker() {
+    public void ignoresDockerContainersWithoutRepositoryRecords() {
         when(registryService.listRuntimeInfos()).thenReturn(List.of());
         when(dockerService.listManagedContainerIds()).thenReturn(List.of("container-created-after-start"));
 
         lifecycleService.start();
         lifecycleService.stop();
 
-        verify(dockerService).start("container-created-after-start");
-        verify(dockerService).stop("container-created-after-start", 3);
+        verify(dockerService, never()).start("container-created-after-start");
+        verify(dockerService, never()).stop("container-created-after-start", 3);
     }
 
     @Test
-    public void stopsDockerContainersWhenAlfrescoRegistryCannotBeRead() {
+    public void doesNotOperateDockerWhenRepositoryIsUnavailable() {
         when(registryService.listRuntimeInfos()).thenThrow(new RuntimeException("repository unavailable"));
         when(dockerService.listManagedContainerIds()).thenReturn(List.of("managed-container"));
 
         lifecycleService.start();
         lifecycleService.stop();
 
-        verify(dockerService).stop("managed-container", 3);
+        verify(dockerService, never()).stop("managed-container", 3);
     }
 
     @Test
     public void explicitAndSmartLifecycleStartDoNotRunTwice() {
-        when(registryService.listRuntimeInfos()).thenReturn(List.of());
+        when(registryService.listRuntimeInfos()).thenReturn(List.of(runtime("agent-1", "managed-container")));
         when(dockerService.listManagedContainerIds()).thenReturn(List.of("managed-container"));
 
         lifecycleService.start();
@@ -142,11 +142,30 @@ public class AgentSubsystemLifecycleServiceTest {
         com.cparedesr.alfdockia.agents.service.license.LicenseRuntimeEnforcementService enforcement =
                 mock(com.cparedesr.alfdockia.agents.service.license.LicenseRuntimeEnforcementService.class);
         lifecycleService.setLicenseEnforcement(enforcement);
-        when(dockerService.listManagedContainerIds()).thenReturn(List.of("excess"));
+        when(registryService.listRuntimeInfos()).thenReturn(List.of(runtime("agent-6", "excess")));
         doThrow(new com.cparedesr.alfdockia.agents.service.exception.BadRequestException(
                 "LICENSE_LIMIT_EXCEEDED", "blocked")).when(enforcement).assertCanRun("excess");
         lifecycleService.start();
         verify(dockerService, never()).start("excess");
+    }
+
+    @Test
+    public void missingDesiredStateNeverImplicitlyStartsAnAgent() {
+        when(registryService.listRuntimeInfos()).thenReturn(List.of(runtime("agent-1", "container-1", null)));
+        lifecycleService.start();
+        verify(dockerService, never()).start("container-1");
+        verify(dockerService, never()).listManagedContainerIds();
+    }
+
+    @Test
+    public void registryRemovedAfterStartupDoesNotUseCachedContainerIdsOnShutdown() {
+        when(registryService.listRuntimeInfos()).thenReturn(
+                List.of(runtime("agent-1", "container-1")), List.of());
+        lifecycleService.start();
+        lifecycleService.stop();
+        verify(dockerService).start("container-1");
+        verify(dockerService, never()).stop("container-1", 3);
+        verify(dockerService, never()).listManagedContainerIds();
     }
 
     private AgentRuntimeInfo runtime(String agentId, String containerId) {

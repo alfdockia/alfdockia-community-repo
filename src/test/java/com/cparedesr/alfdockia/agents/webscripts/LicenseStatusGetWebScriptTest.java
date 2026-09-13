@@ -17,7 +17,7 @@ import static org.mockito.Mockito.*;
 
 public class LicenseStatusGetWebScriptTest {
     @Test
-    public void reportsDockerOnlyContainersInCommunityCapacity() {
+    public void reportsOnlyRepositoryAgentsInCommunityCapacity() {
         AgentRegistryService registry = mock(AgentRegistryService.class);
         DockerService docker = mock(DockerService.class);
         when(registry.countAgentsUpTo(Integer.MAX_VALUE)).thenReturn(1);
@@ -25,7 +25,7 @@ public class LicenseStatusGetWebScriptTest {
         when(docker.listManagedContainerIds()).thenReturn(List.of("a", "b", "c", "d", "e", "f", "g"));
         AgentCapacityService capacity = new AgentCapacityService();
         capacity.setRegistryService(registry);
-        capacity.setDockerService(docker);
+
         SignedLicenseService license = new SignedLicenseService();
         license.setGlobalProperties(new Properties());
         AgentSubsystemServiceLocator locator = mock(AgentSubsystemServiceLocator.class);
@@ -36,7 +36,7 @@ public class LicenseStatusGetWebScriptTest {
         Status status = new Status();
         Map<String, Object> result = endpoint.executeImpl(mock(WebScriptRequest.class), status, new Cache());
         assertEquals(200, status.getCode());
-        assertEquals(7, ((Map<?, ?>) result.get("data")).get("currentAgents"));
+        assertEquals(1, ((Map<?, ?>) result.get("data")).get("currentAgents"));
         assertFalse(license.getStatus().isValid());
         assertEquals(5, license.getStatus().getMaxAgents());
     }

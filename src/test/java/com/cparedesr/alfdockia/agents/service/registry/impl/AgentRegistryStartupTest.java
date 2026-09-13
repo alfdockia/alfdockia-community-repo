@@ -62,6 +62,10 @@ public class AgentRegistryStartupTest {
         assertEquals("agent-1", registry.listRuntimeInfos().get(0).getAgentId());
         assertEquals(1234, registry.listLicenseRuntimeInfos().get(0).getCreatedAt());
         assertEquals(1, registry.countAgentsUpTo(5));
+        assertEquals(1, registry.listAgents(0, 100).size());
+        when(nodes.getProperty(agent, agentProperty("name"))).thenReturn("registered-agent");
+        assertTrue(registry.existsByName("registered-agent"));
+        assertEquals("container-1", registry.getRuntimeInfoByAgentId("agent-1").getContainerId());
         assertEquals(List.of("container-1"), registry.listRegisteredContainerIds());
         verifyNoInteractions(search);
     }
@@ -70,7 +74,17 @@ public class AgentRegistryStartupTest {
         when(files.list(dictionary)).thenReturn(List.of());
         assertTrue(registry.listRuntimeInfos().isEmpty());
         assertTrue(registry.listLicenseRuntimeInfos().isEmpty());
+        assertEquals(0, registry.countAgentsUpTo(5));
+        assertTrue(registry.listAgents(0, 100).isEmpty());
         verify(files, never()).create(any(), any(), any());
         verifyNoInteractions(search);
     }
+    @Test public void updatingObservedRuntimeStatePreservesDesiredState() {
+        when(nodes.exists(agent)).thenReturn(true);
+        var runtime = registry.listRuntimeInfos().get(0);
+        registry.updateRuntimeState(runtime, "stopped");
+        verify(nodes).setProperty(agent, agentProperty("currentState"), "stopped");
+        verify(nodes, never()).setProperty(eq(agent), eq(agentProperty("desiredState")), any());
+    }
+
 }

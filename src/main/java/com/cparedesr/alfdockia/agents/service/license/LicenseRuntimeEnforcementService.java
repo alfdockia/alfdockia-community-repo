@@ -50,11 +50,16 @@ public class LicenseRuntimeEnforcementService {
         }
     }
 
+    public void updateRuntimeState(AgentRuntimeInfo runtime, String currentState) {
+        AuthenticationUtil.runAsSystem(() -> transactionService.getRetryingTransactionHelper()
+                .doInTransaction(() -> { registryService.updateRuntimeState(runtime, currentState); return null; }, false, true));
+    }
+
     public void assertCanRun(String agentOrContainerId) {
         LicenseStatus status = licenseService.getStatus();
-        if (status.isUnlimitedAgents()) return;
-        List<AgentRuntimeInfo> inventory = inventory(false);
-        for (int i = 0; i < Math.min(status.getMaxAgents(), inventory.size()); i++) {
+        List<AgentRuntimeInfo> inventory = inventory();
+        int permitted = status.isUnlimitedAgents() ? inventory.size() : Math.min(status.getMaxAgents(), inventory.size());
+        for (int i = 0; i < permitted; i++) {
             AgentRuntimeInfo info = inventory.get(i);
             if (agentOrContainerId.equals(info.getAgentId()) || agentOrContainerId.equals(info.getContainerId())) return;
         }
@@ -65,15 +70,19 @@ public class LicenseRuntimeEnforcementService {
 
     public synchronized void enforce() {
         LicenseStatus status = licenseService.getStatus();
-        if (status.isUnlimitedAgents()) return;
-        List<AgentRuntimeInfo> inventory = inventory(true);
-        for (int i = status.getMaxAgents(); i < inventory.size(); i++) {
+        List<AgentRuntimeInfo> inventory = inventory();
+        for (int i = 0; i < inventory.size(); i++) {
             AgentRuntimeInfo info = inventory.get(i);
+            boolean excess = !status.isUnlimitedAgents() && i >= status.getMaxAgents();
+            if (!excess && !"stopped".equalsIgnoreCase(info.getDesiredState())) continue;
             try {
-                if (info.getContainerId() != null && "running".equals(info.getCurrentState())) {
+                if (info.getContainerId() != null && !info.getContainerId().isBlank()) {
                     dockerService.stop(info.getContainerId(), 10);
-                    LOGGER.warn("Agente detenido por limite de licencia: " + info.getAgentId()
-                            + "; limite=" + status.getMaxAgents() + "; contenedor=" + info.getContainerId());
+                    if (!"stopped".equals(info.getCurrentState())) {
+                        LOGGER.info("Agente detenido: " + info.getAgentId() + (excess
+                                ? "; excede el limite de " + status.getMaxAgents() + " agentes"
+                                : "; estado deseado stopped en Alfresco"));
+                    }
                 }
                 if (info.getNodeId() != null && (!"stopped".equals(info.getDesiredState())
                         || !"stopped".equals(info.getCurrentState()))) {
@@ -86,39 +95,13 @@ public class LicenseRuntimeEnforcementService {
         }
     }
 
-    private List<AgentRuntimeInfo> inventory(boolean allowDockerFallback) {
-        List<AgentRuntimeInfo> registered;
-        try {
-            registered = AuthenticationUtil.runAsSystem(() ->
-                    transactionService.getRetryingTransactionHelper()
-                            .doInTransaction(() -> registryService.listLicenseRuntimeInfos(), true, true));
-        } catch (RuntimeException failure) {
-            if (!allowDockerFallback) throw failure;
-            LOGGER.warn("Registro de Alfresco no disponible; se aplica el limite usando las fechas de Docker. Causa: "
-                    + failure.getClass().getSimpleName() + ": " + failure.getMessage());
-            LOGGER.debug("Detalle del fallo al leer el registro para aplicar la licencia", failure);
-            registered = Collections.emptyList();
-        }
-        Map<String, AgentRuntimeInfo> byContainer = new LinkedHashMap<>();
-        List<AgentRuntimeInfo> result = new ArrayList<>();
-        for (AgentRuntimeInfo info : registered) {
-            result.add(info);
-            if (info.getContainerId() != null) byContainer.put(info.getContainerId(), info);
-        }
-        for (AgentRuntimeInfo docker : dockerService.listManagedRuntimeInfos()) {
-            AgentRuntimeInfo existing = byContainer.get(docker.getContainerId());
-            if (existing == null) {
-                byContainer.put(docker.getContainerId(), docker);
-                result.add(docker);
-            } else {
-                // Docker is authoritative for whether the container is actually running.
-                existing.setCurrentState(docker.getCurrentState());
-                if (existing.getCreatedAt() == Long.MAX_VALUE) existing.setCreatedAt(docker.getCreatedAt());
-            }
-        }
+    private List<AgentRuntimeInfo> inventory() {
+        List<AgentRuntimeInfo> result = new ArrayList<>(AuthenticationUtil.runAsSystem(() ->
+                transactionService.getRetryingTransactionHelper()
+                        .doInTransaction(() -> registryService.listLicenseRuntimeInfos(), true, true)));
         result.sort(Comparator.comparingLong(AgentRuntimeInfo::getCreatedAt)
                 .thenComparing(info -> Objects.toString(info.getAgentId(), ""))
-                .thenComparing(info -> Objects.toString(info.getContainerId(), "")));
+                .thenComparing(info -> Objects.toString(info.getNodeId(), "")));
         return result;
     }
 }

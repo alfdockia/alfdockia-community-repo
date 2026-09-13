@@ -45,7 +45,7 @@ public class AgentDeploymentServiceTest {
         service = new AgentDeploymentService();
         AgentCapacityService capacity = new AgentCapacityService();
         capacity.setRegistryService(registry);
-        capacity.setDockerService(docker);
+
         service.setCapacityService(capacity);
         service.setDockerService(docker);
         service.setRegistryService(registry);
@@ -74,24 +74,19 @@ public class AgentDeploymentServiceTest {
     }
 
     @Test
-    public void sevenDockerContainersBlockCreationEvenWithOneRegistryEntry() throws Exception {
+    public void dockerOnlyContainersDoNotBlockRegisteredAgentCreation() throws Exception {
         when(registry.countAgentsUpTo(anyInt())).thenReturn(1);
-        when(registry.listRegisteredContainerIds()).thenReturn(java.util.List.of("container-1"));
-        when(docker.listManagedContainerIds()).thenReturn(java.util.List.of(
-                "container-1", "container-2", "container-3", "container-4",
-                "container-5", "container-6", "container-7"));
-        try { service.deploy(request); fail("Must reject over-capacity Docker inventory"); }
-        catch (BadRequestException e) { assertEquals("LICENSE_LIMIT_EXCEEDED", e.getCode()); }
-        verify(docker, never()).createAndStart(any(), any(), any(), any(), any());
-        verify(registry, never()).createAgentNode(any(), any(), any(), any(), any());
-        verify(transaction).rollback();
+        when(docker.listManagedContainerIds()).thenReturn(java.util.List.of("orphan"));
+        service.deploy(request);
+        verify(docker, never()).listManagedContainerIds();
+        verify(transaction).commit();
     }
 
     @Test
-    public void unavailableDockerInventoryCannotGrantCapacity() throws Exception {
-        when(docker.listManagedContainerIds()).thenThrow(new BadRequestException("DOCKER_CLI_ERROR", "unavailable"));
+    public void unavailableRegistryCannotGrantCapacity() throws Exception {
+        when(registry.countAgentsUpTo(anyInt())).thenThrow(new IllegalStateException("offline"));
         try { service.deploy(request); fail("Must reject unknown capacity"); }
-        catch (BadRequestException e) { assertEquals("DOCKER_CLI_ERROR", e.getCode()); }
+        catch (IllegalStateException expected) { }
         verify(docker, never()).createAndStart(any(), any(), any(), any(), any());
         verify(registry, never()).createAgentNode(any(), any(), any(), any(), any());
     }

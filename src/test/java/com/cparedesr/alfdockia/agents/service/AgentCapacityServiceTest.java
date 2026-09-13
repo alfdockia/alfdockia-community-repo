@@ -16,18 +16,20 @@ public class AgentCapacityServiceTest {
         when(docker.listManagedContainerIds()).thenReturn(dockerIds);
         AgentCapacityService service = new AgentCapacityService();
         service.setRegistryService(registry);
-        service.setDockerService(docker);
-        return service.countAgents();
+
+        int result = service.countAgents();
+        verifyNoInteractions(docker);
+        return result;
     }
 
-    @Test public void countsOrphansWithoutDuplicatingRegisteredContainers() {
-        assertEquals(7, count(1, List.of("a"), List.of("a", "b", "c", "d", "e", "f", "g")));
+    @Test public void ignoresContainersWithoutRepositoryRecords() {
+        assertEquals(1, count(1, List.of("a"), List.of("a", "b", "c", "d", "e", "f", "g")));
     }
-    @Test public void countsRegistryEntriesWithoutContainersAndDockerOnlyEntries() {
-        assertEquals(5, count(3, List.of("a", "b"), List.of("a", "b", "c", "d")));
+    @Test public void countsRecordsEvenWithoutContainers() {
+        assertEquals(3, count(3, List.of("a", "b"), List.of("a", "b", "c", "d")));
     }
-    @Test public void sameContainerReportedTwiceIsCountedOnce() {
-        assertEquals(1, count(0, List.of(), List.of("a", "a")));
+    @Test public void dockerOnlyInventoryDoesNotConsumeRepositorySlots() {
+        assertEquals(0, count(0, List.of(), List.of("a", "a")));
     }
     @Test public void emptyInventoryIsZero() {
         assertEquals(0, count(0, List.of(), List.of()));

@@ -25,6 +25,8 @@ public interface AgentRegistryService {
 
     void markLicenseStopped(AgentRuntimeInfo runtime);
 
+    void updateRuntimeState(AgentRuntimeInfo runtime, String currentState);
+
     void createAgentNode(String agentId,
                          AgentDeployRequest sanitizedRequest,
                          String containerId,
