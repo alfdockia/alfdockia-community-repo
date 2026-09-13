@@ -54,7 +54,7 @@ jobs:
       # han cambiado ni se han corrompido durante la transferencia.
       - name: Generate SHA-256 checksums
         shell: bash
-        run: sha256sum target/alfdockia-*.jar > target/SHA256SUMS
+        run: sha256sum target/alfdockia-community-repo*.jar > target/SHA256SUMS
 
       # Los assets de una GitHub Release no caducan como los artefactos de CI;
       # permanecen disponibles hasta que la propia Release sea eliminada.
@@ -65,7 +65,7 @@ jobs:
         shell: bash
         run: |
           gh release create "$GITHUB_REF_NAME" \
-            target/alfdockia-*.jar \
+            target/alfdockia-community-repo*.jar \
             target/SHA256SUMS \
             --verify-tag \
             --generate-notes \

@@ -43,7 +43,7 @@ jobs:
       - name: Upload JAR artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: alfdockia-jars-${{ github.sha }}
-          path: target/alfdockia-*.jar
+          name: lfdockia-community-repo-${{ github.sha }}
+          path: target/alfdockia-community-repo*.jar
           if-no-files-found: error
           retention-days: 190
