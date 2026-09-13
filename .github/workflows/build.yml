@@ -1,0 +1,49 @@
+name: Build JARs
+
+on:
+  push:
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+# La compilacion solo necesita leer el contenido del repositorio.
+permissions:
+  contents: read
+
+# Si llega un commit nuevo a la misma rama, se cancela la compilacion anterior
+# para no consumir minutos ni almacenar artefactos que ya han quedado obsoletos.
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Compile, test and package
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Java 17 and Maven cache
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Compile, test and package JARs
+        run: mvn --batch-mode --no-transfer-progress clean package
+
+      # Los artefactos de Actions permiten descargar y revisar los JAR de cada
+      # ejecucion. Para versiones permanentes se utiliza release.yml.
+      - name: Upload JAR artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: alfdockia-jars-${{ github.sha }}
+          path: target/alfdockia-*.jar
+          if-no-files-found: error
+          retention-days: 190

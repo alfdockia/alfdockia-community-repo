@@ -1,0 +1,72 @@
+name: Publish permanent JAR release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+# Crear una GitHub Release y adjuntar sus ficheros requiere escritura sobre
+# los contenidos del repositorio. No se concede ningun permiso adicional.
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish release assets
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout tagged revision
+        uses: actions/checkout@v7
+
+      - name: Set up Java 17 and Maven cache
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      # Evita publicar por error una etiqueta cuya version no corresponda con
+      # la declarada en pom.xml. Para version 1.0.0 la etiqueta debe ser v1.0.0.
+      - name: Validate tag against Maven project version
+        id: project
+        shell: bash
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          POM_VERSION="$(mvn --batch-mode --no-transfer-progress help:evaluate -Dexpression=project.version -DforceStdout -q)"
+
+          if [[ "$TAG_VERSION" != "$POM_VERSION" ]]; then
+            echo "Tag version '$TAG_VERSION' does not match pom.xml version '$POM_VERSION'." >&2
+            exit 1
+          fi
+
+          echo "version=$POM_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Compile, test and package release JARs
+        run: mvn --batch-mode --no-transfer-progress clean package
+
+      # El checksum permite verificar que los JAR descargados desde GitHub no
+      # han cambiado ni se han corrompido durante la transferencia.
+      - name: Generate SHA-256 checksums
+        shell: bash
+        run: sha256sum target/alfdockia-*.jar > target/SHA256SUMS
+
+      # Los assets de una GitHub Release no caducan como los artefactos de CI;
+      # permanecen disponibles hasta que la propia Release sea eliminada.
+      - name: Create GitHub Release and upload permanent assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROJECT_VERSION: ${{ steps.project.outputs.version }}
+        shell: bash
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            target/alfdockia-*.jar \
+            target/SHA256SUMS \
+            --verify-tag \
+            --generate-notes \
+            --title "ALFDOCKIA $PROJECT_VERSION"
