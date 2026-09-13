@@ -11,7 +11,7 @@
   </imports>
 
   <namespaces>
-    <namespace uri="http://www.cparedesr.com/model/alfdockia/1.0" prefix="alfdockia"/>
+    <namespace uri="http://www.com/model/alfdockia/1.0" prefix="alfdockia"/>
   </namespaces>
 
   <types>

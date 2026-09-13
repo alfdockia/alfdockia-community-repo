@@ -25,7 +25,7 @@
     </bean>
 
     <bean id="alfdockia.agents.subsystemServiceLocator"
-          class="com.cparedesr.alfdockia.agents.service.subsystem.AgentSubsystemServiceLocator">
+          class="com.alfdockia.agents.service.subsystem.AgentSubsystemServiceLocator">
         <property name="applicationContextFactory" ref="alfdockia.agents.subsystem" />
     </bean>
 

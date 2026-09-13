@@ -11,19 +11,19 @@
           http://www.springframework.org/schema/beans/spring-beans.xsd">
 
   <bean id="alfdockia.agents.validationService"
-        class="com.cparedesr.alfdockia.agents.service.AgentValidationService">
+        class="com.alfdockia.agents.service.AgentValidationService">
     <property name="registryService" ref="alfdockia.agents.registryService"/>
     <property name="licenseService" ref="alfdockia.agents.licenseService"/>
     <property name="globalProperties" ref="global-properties"/>
   </bean>
 
   <bean id="alfdockia.agents.licenseService"
-        class="com.cparedesr.alfdockia.agents.service.license.SignedLicenseService">
+        class="com.alfdockia.agents.service.license.SignedLicenseService">
     <property name="globalProperties" ref="global-properties"/>
   </bean>
 
   <bean id="alfdockia.agents.licenseEnforcement"
-        class="com.cparedesr.alfdockia.agents.service.license.LicenseRuntimeEnforcementService"
+        class="com.alfdockia.agents.service.license.LicenseRuntimeEnforcementService"
         destroy-method="stopMonitoring">
     <property name="licenseService" ref="alfdockia.agents.licenseService"/>
     <property name="registryService" ref="alfdockia.agents.registryService"/>
@@ -32,12 +32,12 @@
   </bean>
 
   <bean id="alfdockia.agents.capacityService"
-        class="com.cparedesr.alfdockia.agents.service.AgentCapacityService">
+        class="com.alfdockia.agents.service.AgentCapacityService">
     <property name="registryService" ref="alfdockia.agents.registryService"/>
   </bean>
 
   <bean id="alfdockia.agents.deploymentService"
-        class="com.cparedesr.alfdockia.agents.service.AgentDeploymentService">
+        class="com.alfdockia.agents.service.AgentDeploymentService">
     <property name="capacityService" ref="alfdockia.agents.capacityService"/>
     <property name="transactionService" ref="TransactionService"/>
     <property name="jobLockService" ref="jobLockService"/>
@@ -49,19 +49,19 @@
   </bean>
 
   <bean id="alfdockia.agents.containerSpecFactory"
-        class="com.cparedesr.alfdockia.agents.service.AgentContainerSpecFactory">
+        class="com.alfdockia.agents.service.AgentContainerSpecFactory">
     <property name="secretsService" ref="alfdockia.agents.secretsService"/>
   </bean>
 
   <bean id="alfdockia.agents.folderService"
-        class="com.cparedesr.alfdockia.agents.service.repo.impl.AlfrescoFolderServiceImpl">
+        class="com.alfdockia.agents.service.repo.impl.AlfrescoFolderServiceImpl">
     <property name="nodeService" ref="NodeService"/>
     <property name="searchService" ref="SearchService"/>
     <property name="fileFolderService" ref="FileFolderService"/>
   </bean>
 
   <bean id="alfdockia.agents.registryService"
-        class="com.cparedesr.alfdockia.agents.service.registry.impl.AgentRegistryRepoService">
+        class="com.alfdockia.agents.service.registry.impl.AgentRegistryRepoService">
     <property name="nodeService" ref="NodeService"/>
     <property name="searchService" ref="SearchService"/>
     <property name="fileFolderService" ref="FileFolderService"/>
@@ -69,24 +69,24 @@
   </bean>
 
   <bean id="alfdockia.agents.secretsService"
-        class="com.cparedesr.alfdockia.agents.service.secrets.impl.PropertySecretsService">
+        class="com.alfdockia.agents.service.secrets.impl.PropertySecretsService">
     <property name="globalProperties" ref="global-properties"/>
   </bean>
 
   <bean id="alfdockia.agents.dockerService"
-        class="com.cparedesr.alfdockia.agents.service.docker.impl.DockerSocketCliServiceImpl">
+        class="com.alfdockia.agents.service.docker.impl.DockerSocketCliServiceImpl">
     <property name="globalProperties" ref="global-properties"/>
   </bean>
 
   <bean id="alfdockia.agents.deleteService"
-        class="com.cparedesr.alfdockia.agents.service.AgentDeleteService">
+        class="com.alfdockia.agents.service.AgentDeleteService">
     <property name="registryService" ref="alfdockia.agents.registryService"/>
     <property name="dockerService" ref="alfdockia.agents.dockerService"/>
     <property name="globalProperties" ref="global-properties"/>
   </bean>
 
   <bean id="alfdockia.agents.runtimeControlService"
-        class="com.cparedesr.alfdockia.agents.service.AgentRuntimeControlService">
+        class="com.alfdockia.agents.service.AgentRuntimeControlService">
     <property name="licenseEnforcement" ref="alfdockia.agents.licenseEnforcement"/>
     <property name="registryService" ref="alfdockia.agents.registryService"/>
     <property name="dockerService" ref="alfdockia.agents.dockerService"/>
@@ -96,7 +96,7 @@
   </bean>
 
   <bean id="alfdockia.agents.subsystemLifecycleService"
-        class="com.cparedesr.alfdockia.agents.service.subsystem.AgentSubsystemLifecycleService"
+        class="com.alfdockia.agents.service.subsystem.AgentSubsystemLifecycleService"
         init-method="start"
         destroy-method="stop">
     <property name="licenseEnforcement" ref="alfdockia.agents.licenseEnforcement"/>

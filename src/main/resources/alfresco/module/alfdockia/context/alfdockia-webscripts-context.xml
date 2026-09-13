@@ -10,53 +10,53 @@
           http://www.springframework.org/schema/beans
           http://www.springframework.org/schema/beans/spring-beans.xsd">
 
-  <bean id="webscript.com.cparedesr.alfdockia.agents.agents.post"
-        class="com.cparedesr.alfdockia.agents.webscripts.DeployAgentPostWebScript"
+  <bean id="webscript.com.alfdockia.agents.agents.post"
+        class="com.alfdockia.agents.webscripts.DeployAgentPostWebScript"
         parent="webscript">
     <property name="subsystemServiceLocator" ref="alfdockia.agents.subsystemServiceLocator"/>
   </bean>
 
-  <bean id="webscript.com.cparedesr.alfdockia.agents.agents.get"
-        class="com.cparedesr.alfdockia.agents.webscripts.ListAgentsGetWebScript"
+  <bean id="webscript.com.alfdockia.agents.agents.get"
+        class="com.alfdockia.agents.webscripts.ListAgentsGetWebScript"
         parent="webscript">
     <property name="subsystemServiceLocator" ref="alfdockia.agents.subsystemServiceLocator"/>
   </bean>
 
-  <bean id="webscript.com.cparedesr.alfdockia.agents.agents-id.get"
-        class="com.cparedesr.alfdockia.agents.webscripts.GetAgentByIdWebScript"
+  <bean id="webscript.com.alfdockia.agents.agents-id.get"
+        class="com.alfdockia.agents.webscripts.GetAgentByIdWebScript"
         parent="webscript">
     <property name="subsystemServiceLocator" ref="alfdockia.agents.subsystemServiceLocator"/>
   </bean>
 
-  <bean id="webscript.com.cparedesr.alfdockia.agents.agents-id.delete"
-        class="com.cparedesr.alfdockia.agents.webscripts.DeleteAgentWebScript"
+  <bean id="webscript.com.alfdockia.agents.agents-id.delete"
+        class="com.alfdockia.agents.webscripts.DeleteAgentWebScript"
         parent="webscript">
     <property name="subsystemServiceLocator" ref="alfdockia.agents.subsystemServiceLocator"/>
   </bean>
 
-  <bean id="webscript.com.cparedesr.alfdockia.agents.agents-id-start.post"
-        class="com.cparedesr.alfdockia.agents.webscripts.AgentRuntimeActionPostWebScript"
+  <bean id="webscript.com.alfdockia.agents.agents-id-start.post"
+        class="com.alfdockia.agents.webscripts.AgentRuntimeActionPostWebScript"
         parent="webscript">
     <property name="subsystemServiceLocator" ref="alfdockia.agents.subsystemServiceLocator"/>
     <property name="action" value="start"/>
   </bean>
 
-  <bean id="webscript.com.cparedesr.alfdockia.agents.agents-id-stop.post"
-        class="com.cparedesr.alfdockia.agents.webscripts.AgentRuntimeActionPostWebScript"
+  <bean id="webscript.com.alfdockia.agents.agents-id-stop.post"
+        class="com.alfdockia.agents.webscripts.AgentRuntimeActionPostWebScript"
         parent="webscript">
     <property name="subsystemServiceLocator" ref="alfdockia.agents.subsystemServiceLocator"/>
     <property name="action" value="stop"/>
   </bean>
 
-  <bean id="webscript.com.cparedesr.alfdockia.agents.agents-id-restart.post"
-        class="com.cparedesr.alfdockia.agents.webscripts.AgentRuntimeActionPostWebScript"
+  <bean id="webscript.com.alfdockia.agents.agents-id-restart.post"
+        class="com.alfdockia.agents.webscripts.AgentRuntimeActionPostWebScript"
         parent="webscript">
     <property name="subsystemServiceLocator" ref="alfdockia.agents.subsystemServiceLocator"/>
     <property name="action" value="restart"/>
   </bean>
 
-  <bean id="webscript.com.cparedesr.alfdockia.agents.license.get"
-        class="com.cparedesr.alfdockia.agents.webscripts.LicenseStatusGetWebScript"
+  <bean id="webscript.com.alfdockia.agents.license.get"
+        class="com.alfdockia.agents.webscripts.LicenseStatusGetWebScript"
         parent="webscript">
     <property name="subsystemServiceLocator" ref="alfdockia.agents.subsystemServiceLocator"/>
   </bean>
