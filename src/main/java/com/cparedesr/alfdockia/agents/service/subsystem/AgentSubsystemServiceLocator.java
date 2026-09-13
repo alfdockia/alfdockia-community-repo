@@ -4,6 +4,7 @@
 package com.cparedesr.alfdockia.agents.service.subsystem;
 
 import com.cparedesr.alfdockia.agents.service.AgentDeleteService;
+import com.cparedesr.alfdockia.agents.service.AgentCapacityService;
 import com.cparedesr.alfdockia.agents.service.AgentDeploymentService;
 import com.cparedesr.alfdockia.agents.service.AgentRuntimeControlService;
 import com.cparedesr.alfdockia.agents.service.AgentValidationService;
@@ -35,6 +36,10 @@ public class AgentSubsystemServiceLocator {
 
     public AgentRegistryService getRegistryService() {
         return getBean("alfdockia.agents.registryService", AgentRegistryService.class);
+    }
+
+    public AgentCapacityService getCapacityService() {
+        return getBean("alfdockia.agents.capacityService", AgentCapacityService.class);
     }
 
     public LicenseService getLicenseService() {

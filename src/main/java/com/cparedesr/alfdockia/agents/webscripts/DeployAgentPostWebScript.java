@@ -47,8 +47,6 @@ public class DeployAgentPostWebScript extends DeclarativeWebScript {
             // Jackson convierte el JSON publico en DTOs internos antes de validar.
             AgentDeployRequest deployRequest = mapper.readValue(json, AgentDeployRequest.class);
 
-            subsystemServiceLocator.getValidationService().validateDeployRequest(deployRequest);
-
             AgentDeployResponse response = subsystemServiceLocator.getDeploymentService().deploy(deployRequest);
 
             status.setCode(Status.STATUS_CREATED);

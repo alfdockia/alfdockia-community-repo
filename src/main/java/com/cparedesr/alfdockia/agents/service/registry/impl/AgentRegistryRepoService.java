@@ -11,6 +11,7 @@ import com.cparedesr.alfdockia.agents.service.exception.BadRequestException;
 import com.cparedesr.alfdockia.agents.service.registry.AgentRegistryService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.alfresco.model.ContentModel;
+import org.alfresco.repo.security.authentication.AuthenticationUtil;
 import org.alfresco.service.cmr.model.FileFolderService;
 import org.alfresco.service.cmr.model.FileInfo;
 import org.alfresco.service.cmr.repository.ContentReader;
@@ -78,6 +79,11 @@ public class AgentRegistryRepoService implements AgentRegistryService {
 
     @Override
     public int countAgentsUpTo(int limit) {
+        // The quota is global, including agents the caller cannot see.
+        return AuthenticationUtil.runAsSystem(() -> countRegisteredAgentsUpTo(limit));
+    }
+
+    private int countRegisteredAgentsUpTo(int limit) {
         int safeLimit = Math.max(0, limit);
         if (safeLimit == 0) {
             return 0;
@@ -94,6 +100,20 @@ public class AgentRegistryRepoService implements AgentRegistryService {
             }
         }
         return count;
+    }
+
+    @Override
+    public List<String> listRegisteredContainerIds() {
+        return AuthenticationUtil.runAsSystem(() -> {
+            List<String> ids = new ArrayList<>();
+            for (FileInfo child : fileFolderService.list(ensureRegistryFolder())) {
+                if (TYPE_AGENT.equals(nodeService.getType(child.getNodeRef()))) {
+                    String id = toStr(nodeService.getProperty(child.getNodeRef(), PROP_CONTAINER));
+                    if (id != null && !id.isBlank()) ids.add(id.trim());
+                }
+            }
+            return ids;
+        });
     }
 
     @Override

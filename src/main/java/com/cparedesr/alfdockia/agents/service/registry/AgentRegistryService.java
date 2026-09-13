@@ -19,6 +19,8 @@ public interface AgentRegistryService {
 
     int countAgentsUpTo(int limit);
 
+    List<String> listRegisteredContainerIds();
+
     void createAgentNode(String agentId,
                          AgentDeployRequest sanitizedRequest,
                          String containerId,

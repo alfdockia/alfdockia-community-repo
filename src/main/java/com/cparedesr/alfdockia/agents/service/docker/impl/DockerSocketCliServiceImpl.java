@@ -268,7 +268,7 @@ public class DockerSocketCliServiceImpl implements DockerService {
         String socket = globalProperties.getProperty("alfresco.alfdockia.docker.socket", "/var/run/docker.sock");
         List<String> cmd = Arrays.asList(
                 "docker", "--host", "unix://" + socket,
-                "container", "ls", "--all", "--quiet",
+                "container", "ls", "--all", "--quiet", "--no-trunc",
                 "--filter", "label=" + MANAGED_CONTAINER_LABEL
         );
         return execAndGetLines(cmd);

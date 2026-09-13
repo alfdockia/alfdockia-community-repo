@@ -20,8 +20,6 @@ import java.util.Map;
  */
 public class LicenseStatusGetWebScript extends DeclarativeWebScript {
 
-    private static final int STATUS_AGENT_COUNT_LIMIT = 10000;
-
     private AgentSubsystemServiceLocator subsystemServiceLocator;
 
     public void setSubsystemServiceLocator(AgentSubsystemServiceLocator subsystemServiceLocator) {
@@ -34,11 +32,10 @@ public class LicenseStatusGetWebScript extends DeclarativeWebScript {
 
         try {
             LicenseStatus license = subsystemServiceLocator.getLicenseService().getStatus();
-            AgentRegistryService registryService = subsystemServiceLocator.getRegistryService();
 
             Map<String, Object> data = new HashMap<>();
             data.put("license", license);
-            data.put("currentAgents", registryService.countAgentsUpTo(STATUS_AGENT_COUNT_LIMIT));
+            data.put("currentAgents", subsystemServiceLocator.getCapacityService().countAgents());
 
             model.put("data", data);
             status.setCode(Status.STATUS_OK);

@@ -11,7 +11,7 @@
   "data": {
     "currentAgents": ${data.currentAgents?c},
     "license": {
-      "valid": ${data.license.valid?c},
+      "valid": ${data.license.isValid()?c},
       "edition": "${data.license.edition?js_string}",
       "issuer": "${data.license.issuer?js_string}",
       "product": "${data.license.product?js_string}",

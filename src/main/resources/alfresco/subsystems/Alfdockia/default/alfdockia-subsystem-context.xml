@@ -22,8 +22,18 @@
     <property name="globalProperties" ref="global-properties"/>
   </bean>
 
+  <bean id="alfdockia.agents.capacityService"
+        class="com.cparedesr.alfdockia.agents.service.AgentCapacityService">
+    <property name="registryService" ref="alfdockia.agents.registryService"/>
+    <property name="dockerService" ref="alfdockia.agents.dockerService"/>
+  </bean>
+
   <bean id="alfdockia.agents.deploymentService"
         class="com.cparedesr.alfdockia.agents.service.AgentDeploymentService">
+    <property name="capacityService" ref="alfdockia.agents.capacityService"/>
+    <property name="transactionService" ref="TransactionService"/>
+    <property name="jobLockService" ref="jobLockService"/>
+    <property name="validationService" ref="alfdockia.agents.validationService"/>
     <property name="dockerService" ref="alfdockia.agents.dockerService"/>
     <property name="registryService" ref="alfdockia.agents.registryService"/>
     <property name="containerSpecFactory" ref="alfdockia.agents.containerSpecFactory"/>

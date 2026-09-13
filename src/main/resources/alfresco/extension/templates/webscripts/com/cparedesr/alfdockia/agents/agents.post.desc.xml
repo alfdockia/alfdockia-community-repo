@@ -4,6 +4,7 @@
   <url>/api/-default-/public/alfdockia/versions/1/agents</url>
   <format default="json">argument</format>
   <authentication>user</authentication>
-  <transaction>required</transaction>
+  <!-- Deployment owns its transaction; Docker operations must not be retried by the Web Script. -->
+  <transaction>none</transaction>
   <family>alfdockia</family>
 </webscript>
