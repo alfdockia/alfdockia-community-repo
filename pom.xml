@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.alfdockia</groupId>
     <artifactId>alfdockia-community-repo</artifactId>
-    <version>3.0.0</version>
+    <version>3.0.1</version>
     <name>Alfdockia</name>
     <description>Modulo de Alfresco para desplegar y gestionar listeners dinamicos como contenedores Docker.</description>
     <packaging>jar</packaging>
