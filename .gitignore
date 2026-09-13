@@ -6,6 +6,7 @@ Target/
 /tools/license/
 *.private.pem
 *.license.json
-/test-agentes
+/test-agentes/*
+test-agentes/*.md
 /docs
 /images
