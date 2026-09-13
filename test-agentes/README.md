@@ -28,10 +28,10 @@ curl --include --show-error \
   --header 'Content-Type: application/json' \
   --header 'Accept: application/json' \
   --data-raw '{
-    "name": "test-licencia-nginx-01",
+    "name": "test-licencia-nginx-06",
     "image": "nginx:alpine",
     "env": {
-      "CONTENT_SERVICE_SECURITY_BASICAUTH_PASSWORD": "prop:alfresco.alfdockia.secret.test_nginx"
+      "CONTENT_SERVICE_SECURITY_BASICAUTH_PASSWORD": "prop:alfresco.alfdockia.secret.content_service_password"
     }
   }'
 ```

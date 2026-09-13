@@ -17,6 +17,8 @@ import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.KeyManagerFactory;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -28,6 +30,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -74,6 +79,7 @@ public class DockerSocketCliServiceImpl implements DockerService {
         cmdCreate.add("--host");
         cmdCreate.add("unix://" + socket);
         cmdCreate.add("create");
+        cmdCreate.add("--pull=missing");
         cmdCreate.add("--name");
         cmdCreate.add(agentId);
         if (network != null) {
@@ -101,8 +107,7 @@ public class DockerSocketCliServiceImpl implements DockerService {
 
         cmdCreate.add(image);
 
-        String containerId = execAndGetFirstLine(cmdCreate);
-        if (containerId.isBlank()) throw new BadRequestException("DOCKER_CREATE_FAILED", "docker create did not return container id");
+        String containerId = execAndGetContainerId(cmdCreate);
 
         // docker start <id>
         List<String> cmdStart = Arrays.asList(
@@ -660,16 +665,16 @@ public class DockerSocketCliServiceImpl implements DockerService {
 
     // ---------------- helpers CLI ----------------
 
-    private String execAndGetFirstLine(List<String> cmd) {
+    private String execAndGetContainerId(List<String> cmd) {
         Pair<Integer, String> r = exec(cmd);
         if (r.getFirst() != 0) {
             throw new BadRequestException("DOCKER_CLI_ERROR", r.getSecond());
         }
-        for (String line : r.getSecond().split("\n")) {
-            String s = line.trim();
-            if (!s.isEmpty()) return s;
+        String containerId = r.getSecond().trim();
+        if (!containerId.matches("[0-9a-f]{64}")) {
+            throw new BadRequestException("DOCKER_CREATE_FAILED", "docker create did not return a valid container id");
         }
-        return "";
+        return containerId;
     }
 
     private List<String> execAndGetLines(List<String> cmd) {
@@ -694,24 +699,49 @@ public class DockerSocketCliServiceImpl implements DockerService {
     }
 
     private Pair<Integer, String> exec(List<String> cmd) {
+        Process process = null;
+        ExecutorService readers = Executors.newFixedThreadPool(2, task -> {
+            Thread thread = new Thread(task, "alfdockia-docker-cli-output");
+            thread.setDaemon(true);
+            return thread;
+        });
         try {
-            ProcessBuilder pb = new ProcessBuilder(cmd);
-            pb.redirectErrorStream(true);
-            Process p = pb.start();
-
-            StringBuilder out = new StringBuilder();
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = br.readLine()) != null) {
-                    out.append(line).append('\n');
-                }
-            }
-
-            int exit = p.waitFor();
-            return new Pair<>(exit, out.toString());
-
+            process = startProcess(cmd);
+            process.getOutputStream().close();
+            // Docker writes pull progress and warnings to stderr, IDs and JSON to stdout.
+            // Drain both concurrently so a large download log cannot block the process.
+            Process runningProcess = process;
+            Future<String> stdout = readers.submit(() -> readOutput(runningProcess.getInputStream()));
+            Future<String> stderr = readers.submit(() -> readOutput(runningProcess.getErrorStream()));
+            int exit = process.waitFor();
+            String output = stdout.get();
+            String diagnostics = stderr.get();
+            return new Pair<>(exit, exit == 0 ? output : diagnostics + output);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new BadRequestException("DOCKER_CLI_EXEC_FAILED", "Docker CLI execution interrupted");
         } catch (Exception e) {
             throw new BadRequestException("DOCKER_CLI_EXEC_FAILED", "Failed to execute docker CLI");
+        } finally {
+            if (process != null && process.isAlive()) {
+                process.destroyForcibly();
+            }
+            readers.shutdownNow();
         }
+    }
+
+    Process startProcess(List<String> cmd) throws IOException {
+        return new ProcessBuilder(cmd).start();
+    }
+
+    private static String readOutput(InputStream stream) throws IOException {
+        StringBuilder output = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                output.append(line).append('\n');
+            }
+        }
+        return output.toString();
     }
 }

@@ -3,14 +3,102 @@
  */
 package com.cparedesr.alfdockia.agents.service.docker.impl;
 
+import com.cparedesr.alfdockia.agents.service.exception.BadRequestException;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class DockerSocketCliServiceImplTest {
+
+    private static final String CONTAINER_ID = "0123456789abcdef".repeat(4);
+
+    @Test(timeout = 10000)
+    public void downloadsMissingImageWithoutTreatingProgressAsContainerId() {
+        // More than a pipe buffer of stderr, emitted before stdout, reproduces pull output.
+        CliFixture service = new CliFixture(
+                "printf '%s\\n' \"Unable to find image 'nginx:alpine' locally\" >&2; "
+                + "i=0; while [ $i -lt 6000 ]; do "
+                + "printf '%s\\n' 'Downloading layer: abcdef0123456789 progress 100 percent' >&2; "
+                + "i=$((i + 1)); done; "
+                + "printf '%s\\n' '" + CONTAINER_ID + "'");
+
+        assertEquals(CONTAINER_ID, service.createAndStart("agent-test", "nginx:alpine",
+                Map.of(), Map.of(), List.of()).getContainerId());
+        assertEquals(2, service.commands.size());
+        assertTrue(service.commands.get(0).contains("--pull=missing"));
+        assertEquals(List.of("docker", "--host", "unix:///var/run/docker.sock", "start", CONTAINER_ID),
+                service.commands.get(1));
+    }
+
+    @Test(timeout = 10000)
+    public void startsCachedImageWithValidContainerId() {
+        CliFixture service = new CliFixture("printf '%s\\n' '" + CONTAINER_ID + "'");
+        assertEquals("running", service.createAndStart("agent-test", "nginx:alpine",
+                Map.of(), Map.of(), List.of()).getCurrentState());
+        assertEquals(2, service.commands.size());
+    }
+
+    @Test(timeout = 10000)
+    public void preservesPullFailureAndDoesNotStartContainer() {
+        CliFixture service = new CliFixture("printf '%s\\n' 'pull access denied' >&2; exit 1");
+        try {
+            service.createAndStart("agent-test", "nginx:alpine", Map.of(), Map.of(), List.of());
+            fail("Expected pull failure");
+        } catch (BadRequestException e) {
+            assertEquals("DOCKER_CLI_ERROR", e.getCode());
+            assertTrue(e.getMessage().contains("pull access denied"));
+        }
+        assertEquals(1, service.commands.size());
+    }
+
+    @Test(timeout = 10000)
+    public void rejectsInvalidOrMissingIdBeforeStartingContainer() {
+        for (String output : List.of("", "not-a-container-id", "sha256:" + CONTAINER_ID,
+                CONTAINER_ID + " extra-output")) {
+            CliFixture service = new CliFixture("printf '%s\\n' '" + output + "'");
+            try {
+                service.createAndStart("agent-test", "nginx:alpine", Map.of(), Map.of(), List.of());
+                fail("Expected invalid container ID to be rejected");
+            } catch (BadRequestException e) {
+                assertEquals("DOCKER_CREATE_FAILED", e.getCode());
+            }
+            assertEquals(1, service.commands.size());
+        }
+    }
+
+    // Real subprocess pipes exercise stdout/stderr handling without a Docker daemon or image download.
+    private static class CliFixture extends DockerSocketCliServiceImpl {
+        private final String createScript;
+        private final List<List<String>> commands = new ArrayList<>();
+
+        CliFixture(String createScript) {
+            this.createScript = createScript;
+            Properties properties = new Properties();
+            properties.setProperty("alfresco.alfdockia.docker.network.mode", "none");
+            setGlobalProperties(properties);
+        }
+
+        @Override
+        Process startProcess(List<String> command) throws IOException {
+            commands.add(List.copyOf(command));
+            String operation = command.get(3);
+            if ("create".equals(operation)) {
+                return super.startProcess(List.of("sh", "-c", createScript));
+            }
+            assertEquals("start", operation);
+            assertEquals(CONTAINER_ID, command.get(4));
+            return super.startProcess(List.of("sh", "-c", "printf '%s\\n' '" + CONTAINER_ID + "'"));
+        }
+    }
 
     @Test
     public void prefersComposeDefaultNetworkWhenInheritingFromAlfrescoContainer() {
