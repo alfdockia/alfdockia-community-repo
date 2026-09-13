@@ -33,6 +33,31 @@ public class ModuleResourcesTest {
     }
 
     @Test
+    public void webScriptBeansHaveMatchingDescriptorsAndTemplates() {
+        DefaultListableBeanFactory beans = new DefaultListableBeanFactory();
+        new XmlBeanDefinitionReader(beans).loadBeanDefinitions(new ClassPathResource(
+                "alfresco/module/alfdockia/context/alfdockia-webscripts-context.xml"));
+
+        int checked = 0;
+        for (String name : beans.getBeanDefinitionNames()) {
+            if (!name.startsWith("webscript.")) {
+                continue;
+            }
+            String script = name.substring("webscript.".length());
+            int directoryEnd = script.lastIndexOf('.', script.lastIndexOf('.') - 1);
+            String path = "alfresco/extension/templates/webscripts/"
+                    + script.substring(0, directoryEnd).replace('.', '/')
+                    + "/" + script.substring(directoryEnd + 1);
+            assertTrue("Missing descriptor for " + name,
+                    new ClassPathResource(path + ".desc.xml").exists());
+            assertTrue("Missing JSON template for " + name,
+                    new ClassPathResource(path + ".json.ftl").exists());
+            checked++;
+        }
+        assertTrue("No Web Scripts checked", checked > 0);
+    }
+
+    @Test
     public void moduleRetainsOriginalIdentityAcrossArtifactRename() throws Exception {
         Properties properties = new Properties();
         try (InputStream input = new ClassPathResource(
