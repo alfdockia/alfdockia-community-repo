@@ -2,18 +2,20 @@
 
 Copyright (c) 2026 cparedes. Todos los derechos reservados.
 
-Esta licencia regula el uso de la edición AlfDokia Community y del código fuente publicado con ella. AlfDokia Community forma parte de un modelo Open Core: la edición Community permite uso limitado y auditable, mientras que las capacidades comerciales o ampliadas requieren una licencia AlfDokia válida emitida por el titular.
+Esta licencia regula el uso de la edición AlfDokia Community y del código fuente publicado con ella. AlfDokia Community forma parte de un modelo Open Core: la edición Community permite el uso, la modificación y la ampliación funcional en los términos descritos a continuación. El uso de más de cinco agentes y los usos comerciales reservados en esta licencia requieren una licencia AlfDokia válida emitida por el titular.
 
 ## 1. Concesión de uso Community
 
-Se concede permiso gratuito para descargar, ejecutar, estudiar y modificar AlfDokia Community únicamente para:
+Se concede permiso gratuito para descargar, ejecutar, estudiar, modificar y ampliar funcionalmente AlfDokia Community para:
 
 - evaluación técnica;
 - desarrollo;
 - pruebas internas;
-- uso en entornos propios con un máximo de cinco agentes AlfDokia activos o registrados.
+- uso en entornos propios, incluidos entornos de producción, con un máximo de cinco agentes AlfDokia activos o registrados.
 
-El límite Community de cinco agentes forma parte de los términos de esta licencia y de la funcionalidad del producto.
+El límite Community de cinco agentes forma parte de los términos de esta licencia y de la funcionalidad del producto, y se aplica a todos los usos anteriores. El uso en producción en entornos propios no requiere por sí mismo una licencia comercial, siempre que se respeten este límite y las demás condiciones de esta licencia.
+
+Se permite desarrollar extensiones, integraciones y nuevas funcionalidades, así como modificar el código fuente para adaptar el producto a necesidades propias. Estas modificaciones y ampliaciones deben conservar y respetar el máximo de cinco agentes AlfDokia activos o registrados y los controles que lo hacen efectivo. Ampliar las funcionalidades del producto no concede permiso para ampliar el número de agentes ni para eludir su licenciamiento.
 
 ## 2. Licencia comercial o ampliada
 
@@ -39,7 +41,7 @@ Salvo autorización expresa por escrito del titular, no está permitido:
 
 ## 4. Distribución de modificaciones
 
-Puedes mantener modificaciones internas para evaluación, desarrollo o pruebas dentro del límite Community.
+Puedes desarrollar y mantener modificaciones, extensiones e integraciones internas para evaluación, desarrollo, pruebas y uso en producción en entornos propios, siempre dentro del límite Community de cinco agentes activos o registrados y respetando los controles de licencia.
 
 La redistribución pública o privada de modificaciones requiere conservar esta licencia, los avisos de copyright y las restricciones de la edición Community, salvo que exista un acuerdo comercial por escrito.
 
