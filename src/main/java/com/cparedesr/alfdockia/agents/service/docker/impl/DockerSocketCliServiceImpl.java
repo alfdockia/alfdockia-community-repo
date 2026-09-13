@@ -4,6 +4,7 @@
 package com.cparedesr.alfdockia.agents.service.docker.impl;
 
 import com.cparedesr.alfdockia.agents.model.AgentDeployRequest;
+import com.cparedesr.alfdockia.agents.model.AgentRuntimeInfo;
 import com.cparedesr.alfdockia.agents.service.docker.DockerService;
 import com.cparedesr.alfdockia.agents.service.exception.BadRequestException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -117,6 +118,44 @@ public class DockerSocketCliServiceImpl implements DockerService {
         execOrFail(cmdStart);
 
         return new CreateResult(containerId, "running");
+    }
+
+    @Override
+    public List<AgentRuntimeInfo> listManagedRuntimeInfos() {
+        List<AgentRuntimeInfo> result = new ArrayList<>();
+        for (String id : listManagedContainerIds()) {
+            try {
+                JsonNode container;
+                if ("socket".equalsIgnoreCase(getTrimmedProperty("alfresco.alfdockia.docker.mode", "socket"))) {
+                    String socket = getTrimmedProperty("alfresco.alfdockia.docker.socket", "/var/run/docker.sock");
+                    List<String> output = execAndGetLines(List.of("docker", "--host", "unix://" + socket,
+                            "inspect", "--format", "{{json .}}", id));
+                    container = objectMapper.readTree(String.join("\n", output));
+                } else {
+                    String base = getTrimmedProperty("alfresco.alfdockia.docker.baseUrl", "");
+                    HttpRequest request = HttpRequest.newBuilder()
+                            .uri(URI.create(base.replaceAll("/+$", "") + "/containers/" + id + "/json"))
+                            .timeout(Duration.ofSeconds(30)).GET().build();
+                    HttpResponse<String> response = buildTlsHttpClientIfConfigured()
+                            .send(request, HttpResponse.BodyHandlers.ofString());
+                    if (response.statusCode() == 404) continue;
+                    if (response.statusCode() != 200) throw new IllegalStateException("Docker inspect failed");
+                    container = objectMapper.readTree(response.body());
+                }
+                AgentRuntimeInfo info = new AgentRuntimeInfo();
+                info.setContainerId(container.path("Id").asText());
+                info.setAgentId(container.path("Config").path("Labels").path(MANAGED_CONTAINER_LABEL).asText(id));
+                info.setCreatedAt(java.time.Instant.parse(container.path("Created").asText()).toEpochMilli());
+                info.setCurrentState(container.path("State").path("Running").asBoolean() ? "running" : "stopped");
+                result.add(info);
+            } catch (BadRequestException e) {
+                if (isNotFound(e)) continue;
+                throw e;
+            } catch (Exception e) {
+                throw new BadRequestException("DOCKER_INVENTORY_FAILED", "Cannot inspect managed container " + id);
+            }
+        }
+        return result;
     }
 
     @Override

@@ -48,6 +48,7 @@ public class AgentRuntimeControlServiceTest {
         props.setProperty("alfresco.alfdockia.subsystem.stopTimeoutSeconds", "7");
 
         service = new AgentRuntimeControlService();
+        service.setLicenseEnforcement(mock(com.cparedesr.alfdockia.agents.service.license.LicenseRuntimeEnforcementService.class));
         service.setRegistryService(registryService);
         service.setDockerService(dockerService);
         service.setValidationService(validationService);
@@ -108,6 +109,30 @@ public class AgentRuntimeControlServiceTest {
 
         verify(dockerService).stop("container-1", 7);
         verify(registryService).updateAgentState("agent-1", "stopped", "stopped");
+    }
+
+    @Test
+    public void licenseBlocksStartBeforeDockerOrRegistryMutation() {
+        com.cparedesr.alfdockia.agents.service.license.LicenseRuntimeEnforcementService enforcement =
+                mock(com.cparedesr.alfdockia.agents.service.license.LicenseRuntimeEnforcementService.class);
+        service.setLicenseEnforcement(enforcement);
+        org.mockito.Mockito.doThrow(new com.cparedesr.alfdockia.agents.service.exception.BadRequestException(
+                "LICENSE_LIMIT_EXCEEDED", "blocked")).when(enforcement).assertCanRun("agent-6");
+        try { service.startAgent("agent-6"); org.junit.Assert.fail("Must reject"); }
+        catch (com.cparedesr.alfdockia.agents.service.exception.BadRequestException expected) { }
+        org.mockito.Mockito.verifyNoInteractions(dockerService, registryService);
+    }
+
+    @Test
+    public void licenseBlocksRestartBeforeRemovingOriginalContainer() {
+        com.cparedesr.alfdockia.agents.service.license.LicenseRuntimeEnforcementService enforcement =
+                mock(com.cparedesr.alfdockia.agents.service.license.LicenseRuntimeEnforcementService.class);
+        service.setLicenseEnforcement(enforcement);
+        org.mockito.Mockito.doThrow(new com.cparedesr.alfdockia.agents.service.exception.BadRequestException(
+                "LICENSE_LIMIT_EXCEEDED", "blocked")).when(enforcement).assertCanRun("agent-6");
+        try { service.restartAgent("agent-6", null); org.junit.Assert.fail("Must reject"); }
+        catch (com.cparedesr.alfdockia.agents.service.exception.BadRequestException expected) { }
+        org.mockito.Mockito.verifyNoInteractions(dockerService, registryService);
     }
 
     private AgentDetail detail(String configJson, String containerId) {

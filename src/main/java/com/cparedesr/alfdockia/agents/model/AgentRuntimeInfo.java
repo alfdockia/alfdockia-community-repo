@@ -7,6 +7,10 @@ package com.cparedesr.alfdockia.agents.model;
  * Informacion minima necesaria para operar sobre el runtime del agente.
  */
 public class AgentRuntimeInfo {
+    private long createdAt = Long.MAX_VALUE;
+    public long getCreatedAt() { return createdAt; }
+    public void setCreatedAt(long value) { createdAt = value; }
+
     private String agentId;
     private String nodeId;
     private String containerId;

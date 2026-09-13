@@ -6,6 +6,7 @@ package com.cparedesr.alfdockia.agents.service;
 import com.cparedesr.alfdockia.agents.model.AgentDeployRequest;
 import com.cparedesr.alfdockia.agents.model.AgentDetail;
 import com.cparedesr.alfdockia.agents.model.AgentRuntimeInfo;
+import com.cparedesr.alfdockia.agents.service.license.LicenseRuntimeEnforcementService;
 import com.cparedesr.alfdockia.agents.service.docker.DockerService;
 import com.cparedesr.alfdockia.agents.service.exception.BadRequestException;
 import com.cparedesr.alfdockia.agents.service.registry.AgentRegistryService;
@@ -23,6 +24,10 @@ import java.util.Properties;
  */
 public class AgentRuntimeControlService {
 
+    private LicenseRuntimeEnforcementService licenseEnforcement;
+    public void setLicenseEnforcement(LicenseRuntimeEnforcementService value) {
+        licenseEnforcement = value;
+    }
     private AgentRegistryService registryService;
     private DockerService dockerService;
     private AgentValidationService validationService;
@@ -39,6 +44,13 @@ public class AgentRuntimeControlService {
     public void setGlobalProperties(Properties globalProperties) { this.globalProperties = globalProperties; }
 
     public AgentDetail startAgent(String agentId) {
+        synchronized (licenseEnforcement) {
+            licenseEnforcement.assertCanRun(agentId);
+            return startAllowedAgent(agentId);
+        }
+    }
+
+    private AgentDetail startAllowedAgent(String agentId) {
         AgentRuntimeInfo info = registryService.getRuntimeInfoByAgentId(agentId);
 
         if (dockerEnabled()) {
@@ -67,6 +79,13 @@ public class AgentRuntimeControlService {
     }
 
     public AgentDetail restartAgent(String agentId, JsonNode changes) {
+        synchronized (licenseEnforcement) {
+            licenseEnforcement.assertCanRun(agentId);
+            return restartAllowedAgent(agentId, changes);
+        }
+    }
+
+    private AgentDetail restartAllowedAgent(String agentId, JsonNode changes) {
         AgentDetail current = registryService.getAgentDetailByAgentId(agentId);
         AgentDeployRequest merged = mergeConfig(current, changes);
         validationService.validateAgentConfig(merged);

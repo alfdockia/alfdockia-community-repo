@@ -18,6 +18,8 @@ import org.alfresco.service.cmr.repository.ContentReader;
 import org.alfresco.service.cmr.repository.ContentService;
 import org.alfresco.service.cmr.repository.ContentWriter;
 import org.alfresco.service.cmr.repository.NodeRef;
+import org.alfresco.service.cmr.repository.ChildAssociationRef;
+import org.alfresco.service.namespace.RegexQNamePattern;
 import org.alfresco.service.cmr.repository.NodeService;
 import org.alfresco.service.cmr.repository.StoreRef;
 import org.alfresco.service.cmr.search.ResultSet;
@@ -114,6 +116,32 @@ public class AgentRegistryRepoService implements AgentRegistryService {
             }
             return ids;
         });
+    }
+
+    @Override
+    public List<AgentRuntimeInfo> listLicenseRuntimeInfos() {
+        return AuthenticationUtil.runAsSystem(() -> {
+            List<AgentRuntimeInfo> result = new ArrayList<>();
+            for (FileInfo child : fileFolderService.list(getDataDictionary())) {
+                if (!child.isFolder() || !"Alfdockia Agents".equals(child.getName())) continue;
+                for (FileInfo agent : fileFolderService.list(child.getNodeRef())) {
+                    if (TYPE_AGENT.equals(nodeService.getType(agent.getNodeRef()))) {
+                        result.add(mapRuntimeInfo(agent.getNodeRef()));
+                    }
+                }
+            }
+            return result;
+        });
+    }
+
+    @Override
+    public void markLicenseStopped(AgentRuntimeInfo runtime) {
+        NodeRef node = new NodeRef(StoreRef.STORE_REF_WORKSPACE_SPACESSTORE, runtime.getNodeId());
+        if (nodeService.exists(node)) {
+            nodeService.setProperty(node, PROP_DESIRED, "stopped");
+            nodeService.setProperty(node, PROP_CURRENT, "stopped");
+            nodeService.setProperty(node, PROP_UPDATED, new Date());
+        }
     }
 
     @Override
@@ -228,28 +256,7 @@ public class AgentRegistryRepoService implements AgentRegistryService {
 
     @Override
     public List<AgentRuntimeInfo> listRuntimeInfos() {
-        ResultSet rs = null;
-        try {
-            String folderPathQuery = buildRegistryFolderPathQuery();
-
-            SearchParameters sp = new SearchParameters();
-            sp.setLanguage(SearchService.LANGUAGE_FTS_ALFRESCO);
-            sp.addStore(StoreRef.STORE_REF_WORKSPACE_SPACESSTORE);
-            sp.setQuery(AGENT_TYPE_QUERY + " AND PATH:\"" + folderPathQuery + "/*\"");
-            sp.setMaxItems(10000);
-
-            rs = searchService.query(sp);
-            if (rs == null || rs.length() == 0) return Collections.emptyList();
-
-            List<AgentRuntimeInfo> out = new ArrayList<>(rs.length());
-            for (int i = 0; i < rs.length(); i++) {
-                out.add(mapRuntimeInfo(rs.getNodeRef(i)));
-            }
-            return out;
-
-        } finally {
-            if (rs != null) rs.close();
-        }
+        return listLicenseRuntimeInfos();
     }
 
     @Override
@@ -320,6 +327,9 @@ public class AgentRegistryRepoService implements AgentRegistryService {
 
     private AgentRuntimeInfo mapRuntimeInfo(NodeRef nodeRef) {
         AgentRuntimeInfo info = new AgentRuntimeInfo();
+        Serializable created = nodeService.getProperty(nodeRef, PROP_CREATED);
+        if (!(created instanceof Date)) created = nodeService.getProperty(nodeRef, ContentModel.PROP_CREATED);
+        if (created instanceof Date) info.setCreatedAt(((Date) created).getTime());
         info.setAgentId(toStr(nodeService.getProperty(nodeRef, PROP_AGENT_ID)));
         info.setNodeId(nodeRef.getId());
         info.setContainerId(toStr(nodeService.getProperty(nodeRef, PROP_CONTAINER)));
@@ -395,18 +405,19 @@ public class AgentRegistryRepoService implements AgentRegistryService {
     }
 
     private NodeRef getDataDictionary() {
-        ResultSet rs = null;
-        try {
-            SearchParameters sp = new SearchParameters();
-            sp.setLanguage(SearchService.LANGUAGE_FTS_ALFRESCO);
-            sp.addStore(StoreRef.STORE_REF_WORKSPACE_SPACESSTORE);
-            sp.setQuery("PATH:\"/app:company_home/app:dictionary\"");
-            rs = searchService.query(sp);
-            if (rs == null || rs.length() == 0) throw new BadRequestException("PATH_NOT_FOUND", "Data Dictionary not found");
-            return rs.getNodeRef(0);
-        } finally {
-            if (rs != null) rs.close();
+        // Traverse repository associations directly: startup must not depend on Solr or indexing.
+        NodeRef root = nodeService.getRootNode(StoreRef.STORE_REF_WORKSPACE_SPACESSTORE);
+        NodeRef companyHome = applicationChild(root, "company_home");
+        return applicationChild(companyHome, "dictionary");
+    }
+
+    private NodeRef applicationChild(NodeRef parent, String localName) {
+        QName name = QName.createQName("http://www.alfresco.org/model/application/1.0", localName);
+        List<ChildAssociationRef> children = nodeService.getChildAssocs(parent, RegexQNamePattern.MATCH_ALL, name);
+        if (children.size() != 1) {
+            throw new BadRequestException("PATH_NOT_FOUND", "Repository application folder unavailable: " + localName);
         }
+        return children.get(0).getChildRef();
     }
 
     /**

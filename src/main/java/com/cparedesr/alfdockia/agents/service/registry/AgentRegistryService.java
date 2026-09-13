@@ -21,6 +21,10 @@ public interface AgentRegistryService {
 
     List<String> listRegisteredContainerIds();
 
+    List<AgentRuntimeInfo> listLicenseRuntimeInfos();
+
+    void markLicenseStopped(AgentRuntimeInfo runtime);
+
     void createAgentNode(String agentId,
                          AgentDeployRequest sanitizedRequest,
                          String containerId,

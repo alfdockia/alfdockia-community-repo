@@ -22,6 +22,32 @@ public class DockerSocketCliServiceImplTest {
     private static final String CONTAINER_ID = "0123456789abcdef".repeat(4);
 
     @Test(timeout = 10000)
+    public void readsDockerCreationTimeAndStateForLicenseOrdering() {
+        DockerSocketCliServiceImpl service = new DockerSocketCliServiceImpl() {
+            @Override Process startProcess(List<String> command) throws IOException {
+                String output;
+                if (command.contains("inspect")) {
+                    output = "{\"Id\":\"" + CONTAINER_ID + "\",\"Created\":\"2026-01-01T00:00:00Z\","
+                            + "\"Config\":{\"Labels\":{\"com.cparedesr.alfdockia.agentId\":\"agent-oldest\"}},"
+                            + "\"State\":{\"Running\":true}}";
+                } else {
+                    assertTrue(command.contains("--all"));
+                    assertTrue(command.contains("--no-trunc"));
+                    output = CONTAINER_ID;
+                }
+                return super.startProcess(List.of("sh", "-c", "printf '%s\\n' '" + output + "'"));
+            }
+        };
+        service.setGlobalProperties(new Properties());
+        var inventory = service.listManagedRuntimeInfos();
+        assertEquals(1, inventory.size());
+        assertEquals("agent-oldest", inventory.get(0).getAgentId());
+        assertEquals(CONTAINER_ID, inventory.get(0).getContainerId());
+        assertEquals(java.time.Instant.parse("2026-01-01T00:00:00Z").toEpochMilli(), inventory.get(0).getCreatedAt());
+        assertEquals("running", inventory.get(0).getCurrentState());
+    }
+
+    @Test(timeout = 10000)
     public void downloadsMissingImageWithoutTreatingProgressAsContainerId() {
         // More than a pipe buffer of stderr, emitted before stdout, reproduces pull output.
         CliFixture service = new CliFixture(

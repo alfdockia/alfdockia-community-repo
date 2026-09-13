@@ -22,6 +22,15 @@
     <property name="globalProperties" ref="global-properties"/>
   </bean>
 
+  <bean id="alfdockia.agents.licenseEnforcement"
+        class="com.cparedesr.alfdockia.agents.service.license.LicenseRuntimeEnforcementService"
+        destroy-method="stopMonitoring">
+    <property name="licenseService" ref="alfdockia.agents.licenseService"/>
+    <property name="registryService" ref="alfdockia.agents.registryService"/>
+    <property name="dockerService" ref="alfdockia.agents.dockerService"/>
+    <property name="transactionService" ref="TransactionService"/>
+  </bean>
+
   <bean id="alfdockia.agents.capacityService"
         class="com.cparedesr.alfdockia.agents.service.AgentCapacityService">
     <property name="registryService" ref="alfdockia.agents.registryService"/>
@@ -79,6 +88,7 @@
 
   <bean id="alfdockia.agents.runtimeControlService"
         class="com.cparedesr.alfdockia.agents.service.AgentRuntimeControlService">
+    <property name="licenseEnforcement" ref="alfdockia.agents.licenseEnforcement"/>
     <property name="registryService" ref="alfdockia.agents.registryService"/>
     <property name="dockerService" ref="alfdockia.agents.dockerService"/>
     <property name="validationService" ref="alfdockia.agents.validationService"/>
@@ -90,6 +100,7 @@
         class="com.cparedesr.alfdockia.agents.service.subsystem.AgentSubsystemLifecycleService"
         init-method="start"
         destroy-method="stop">
+    <property name="licenseEnforcement" ref="alfdockia.agents.licenseEnforcement"/>
     <property name="registryService" ref="alfdockia.agents.registryService"/>
     <property name="dockerService" ref="alfdockia.agents.dockerService"/>
     <property name="globalProperties" ref="global-properties"/>

@@ -4,6 +4,8 @@
 package com.cparedesr.alfdockia.agents.service.subsystem;
 
 import com.cparedesr.alfdockia.agents.model.AgentRuntimeInfo;
+import com.cparedesr.alfdockia.agents.service.exception.BadRequestException;
+import com.cparedesr.alfdockia.agents.service.license.LicenseRuntimeEnforcementService;
 import com.cparedesr.alfdockia.agents.service.docker.DockerService;
 import com.cparedesr.alfdockia.agents.service.registry.AgentRegistryService;
 import org.apache.commons.logging.Log;
@@ -35,6 +37,10 @@ public class AgentSubsystemLifecycleService implements SmartLifecycle {
             "                Todos los derechos reservados.",
             "==============================================================");
 
+    private LicenseRuntimeEnforcementService licenseEnforcement;
+    public void setLicenseEnforcement(LicenseRuntimeEnforcementService value) {
+        licenseEnforcement = value;
+    }
     private AgentRegistryService registryService;
     private DockerService dockerService;
     private Properties globalProperties;
@@ -60,6 +66,7 @@ public class AgentSubsystemLifecycleService implements SmartLifecycle {
         }
 
         STARTUP_BANNER.forEach(LOGGER::info);
+        licenseEnforcement.startMonitoring();
 
         if (!isStartAgentsOnStart()) {
             running = true;
@@ -82,12 +89,20 @@ public class AgentSubsystemLifecycleService implements SmartLifecycle {
             }
 
             try {
+                licenseEnforcement.assertCanRun(containerId);
                 knownContainerIds.add(containerId);
                 dockerService.start(containerId);
                 LOGGER.info("Agente " + runtime.getAgentId() + " arrancado al iniciar el subsistema");
             } catch (RuntimeException e) {
-                LOGGER.warn("No se pudo arrancar el agente " + runtime.getAgentId()
-                        + " con contenedor " + containerId + " al iniciar el subsistema", e);
+                if (e instanceof BadRequestException
+                        && "LICENSE_LIMIT_EXCEEDED".equals(((BadRequestException) e).getCode())) {
+                    LOGGER.info("Agente " + runtime.getAgentId() + " no arrancado al iniciar Alfdockia: " + e.getMessage());
+                } else {
+                    LOGGER.warn("No se pudo arrancar el agente " + runtime.getAgentId()
+                            + " con contenedor " + containerId + ": "
+                            + e.getClass().getSimpleName() + ": " + e.getMessage());
+                    LOGGER.debug("Detalle del fallo de arranque del agente " + runtime.getAgentId(), e);
+                }
             }
         }
 
@@ -100,6 +115,7 @@ public class AgentSubsystemLifecycleService implements SmartLifecycle {
             return;
         }
 
+        licenseEnforcement.stopMonitoring();
         if (!isStopAgentsOnStop()) {
             running = false;
             LOGGER.info("Parada automatica de agentes desactivada para Alfdockia");

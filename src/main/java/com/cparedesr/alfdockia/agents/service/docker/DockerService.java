@@ -4,6 +4,7 @@
 package com.cparedesr.alfdockia.agents.service.docker;
 
 import com.cparedesr.alfdockia.agents.model.AgentDeployRequest;
+import com.cparedesr.alfdockia.agents.model.AgentRuntimeInfo;
 
 import java.util.List;
 import java.util.Map;
@@ -17,6 +18,8 @@ public interface DockerService {
                                Map<String, String> env,
                                Map<String, String> labels,
                                List<AgentDeployRequest.PortMapping> ports);
+
+    List<AgentRuntimeInfo> listManagedRuntimeInfos();
 
     void start(String containerId);
 

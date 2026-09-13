@@ -38,6 +38,7 @@ public class AgentSubsystemLifecycleServiceTest {
         props.setProperty("alfresco.alfdockia.subsystem.stopTimeoutSeconds", "3");
 
         lifecycleService = new AgentSubsystemLifecycleService();
+        lifecycleService.setLicenseEnforcement(mock(com.cparedesr.alfdockia.agents.service.license.LicenseRuntimeEnforcementService.class));
         lifecycleService.setRegistryService(registryService);
         lifecycleService.setDockerService(dockerService);
         lifecycleService.setGlobalProperties(props);
@@ -119,6 +120,33 @@ public class AgentSubsystemLifecycleServiceTest {
         lifecycleService.start();
 
         verify(dockerService, times(1)).start("managed-container");
+    }
+
+    @Test
+    public void startsLicenseMonitorEvenWhenAutomaticAgentStartIsDisabled() {
+        com.cparedesr.alfdockia.agents.service.license.LicenseRuntimeEnforcementService enforcement =
+                mock(com.cparedesr.alfdockia.agents.service.license.LicenseRuntimeEnforcementService.class);
+        lifecycleService.setLicenseEnforcement(enforcement);
+        Properties properties = new Properties();
+        properties.setProperty("alfresco.alfdockia.subsystem.startAgentsOnStart", "false");
+        properties.setProperty("alfresco.alfdockia.subsystem.stopAgentsOnStop", "false");
+        lifecycleService.setGlobalProperties(properties);
+        lifecycleService.start();
+        lifecycleService.stop();
+        verify(enforcement).startMonitoring();
+        verify(enforcement).stopMonitoring();
+    }
+
+    @Test
+    public void startupDoesNotStartExcessContainers() {
+        com.cparedesr.alfdockia.agents.service.license.LicenseRuntimeEnforcementService enforcement =
+                mock(com.cparedesr.alfdockia.agents.service.license.LicenseRuntimeEnforcementService.class);
+        lifecycleService.setLicenseEnforcement(enforcement);
+        when(dockerService.listManagedContainerIds()).thenReturn(List.of("excess"));
+        doThrow(new com.cparedesr.alfdockia.agents.service.exception.BadRequestException(
+                "LICENSE_LIMIT_EXCEEDED", "blocked")).when(enforcement).assertCanRun("excess");
+        lifecycleService.start();
+        verify(dockerService, never()).start("excess");
     }
 
     private AgentRuntimeInfo runtime(String agentId, String containerId) {
