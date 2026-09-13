@@ -9,7 +9,7 @@
        xsi:schemaLocation="http://www.springframework.org/schema/beans
           http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
 
-    <import resource="classpath:alfresco/module/${project.artifactId}/context/alfdockia-model-context.xml" />
+    <import resource="classpath:alfresco/module/alfdockia/context/alfdockia-model-context.xml" />
 
     <bean id="alfdockia.agents.subsystem"
           class="org.alfresco.repo.management.subsystems.ChildApplicationContextFactory"
@@ -29,6 +29,6 @@
         <property name="applicationContextFactory" ref="alfdockia.agents.subsystem" />
     </bean>
 
-    <import resource="classpath:alfresco/module/${project.artifactId}/context/alfdockia-webscripts-context.xml" />
+    <import resource="classpath:alfresco/module/alfdockia/context/alfdockia-webscripts-context.xml" />
 
 </beans>

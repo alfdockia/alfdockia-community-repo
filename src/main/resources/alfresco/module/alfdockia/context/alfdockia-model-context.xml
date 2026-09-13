@@ -12,7 +12,7 @@
   <bean id="alfdockia.dictionaryBootstrap" parent="dictionaryModelBootstrap" depends-on="dictionaryBootstrap">
         <property name="models">
             <list>
-                <value>alfresco/module/${project.artifactId}/model/alfdockia-model.xml</value>
+                <value>alfresco/module/alfdockia/model/alfdockia-model.xml</value>
             </list>
         </property>
     </bean>
