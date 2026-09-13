@@ -1,0 +1,9 @@
+<webscript>
+  <shortname>alf-docia-alfdockia-start</shortname>
+  <description>Arranca un agente Alfdockia</description>
+  <url>/api/-default-/public/alfdockia/versions/1/agents/{id}/start</url>
+  <format default="json">argument</format>
+  <authentication>user</authentication>
+  <transaction>required</transaction>
+  <family>alfdockia</family>
+</webscript>

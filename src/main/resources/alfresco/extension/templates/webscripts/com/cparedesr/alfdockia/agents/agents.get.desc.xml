@@ -1,0 +1,9 @@
+<webscript>
+  <shortname>dockia-alfdockia-list</shortname>
+  <description>Lista agentes de IA</description>
+  <url>/api/-default-/public/alfdockia/versions/1/agents</url>
+  <format default="json">argument</format>
+  <authentication>user</authentication>
+  <transaction>required</transaction>
+  <family>alfdockia</family>
+</webscript>

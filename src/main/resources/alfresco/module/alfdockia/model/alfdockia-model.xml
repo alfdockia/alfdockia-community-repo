@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<model name="alfdockia:model" xmlns="http://www.alfresco.org/model/dictionary/1.0">
+
+  <description>Modelo de contenido para registrar agentes gestionados por Alfdockia.</description>
+  <author>cparedesr</author>
+  <version>1.1</version>
+
+  <imports>
+    <import uri="http://www.alfresco.org/model/dictionary/1.0" prefix="d"/>
+    <import uri="http://www.alfresco.org/model/content/1.0" prefix="cm"/>
+  </imports>
+
+  <namespaces>
+    <namespace uri="http://www.cparedesr.com/model/alfdockia/1.0" prefix="alfdockia"/>
+  </namespaces>
+
+  <types>
+    <type name="alfdockia:agent">
+      <title>Alfdockia Agent</title>
+      <parent>cm:content</parent>
+
+      <properties>
+        <property name="alfdockia:agentId">
+          <type>d:text</type>
+          <mandatory>true</mandatory>
+          <index enabled="true">
+            <atomic>true</atomic>
+            <stored>true</stored>
+            <tokenised>false</tokenised>
+          </index>
+        </property>
+
+        <property name="alfdockia:name">
+          <type>d:text</type>
+          <mandatory>true</mandatory>
+          <index enabled="true">
+            <atomic>true</atomic>
+            <stored>true</stored>
+            <tokenised>false</tokenised>
+          </index>
+        </property>
+
+        <property name="alfdockia:image">
+          <type>d:text</type>
+          <mandatory>true</mandatory>
+        </property>
+
+        <property name="alfdockia:desiredState">
+          <type>d:text</type>
+          <mandatory>true</mandatory>
+        </property>
+
+        <property name="alfdockia:currentState">
+          <type>d:text</type>
+          <mandatory>true</mandatory>
+        </property>
+
+        <property name="alfdockia:health">
+          <type>d:text</type>
+          <mandatory>false</mandatory>
+        </property>
+
+        <property name="alfdockia:containerId">
+          <type>d:text</type>
+          <mandatory>false</mandatory>
+        </property>
+
+        <property name="alfdockia:createdAt">
+          <type>d:datetime</type>
+          <mandatory>true</mandatory>
+        </property>
+
+        <property name="alfdockia:updatedAt">
+          <type>d:datetime</type>
+          <mandatory>true</mandatory>
+        </property>
+      </properties>
+    </type>
+  </types>
+
+</model>

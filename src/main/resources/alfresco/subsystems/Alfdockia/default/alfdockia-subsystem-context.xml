@@ -1,0 +1,88 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+
+  Contexto hijo del subsistema Alfdockia. Encapsula los servicios que
+  gestionan agentes y su runtime Docker.
+-->
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="
+          http://www.springframework.org/schema/beans
+          http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+  <bean id="alfdockia.agents.validationService"
+        class="com.cparedesr.alfdockia.agents.service.AgentValidationService">
+    <property name="registryService" ref="alfdockia.agents.registryService"/>
+    <property name="licenseService" ref="alfdockia.agents.licenseService"/>
+    <property name="globalProperties" ref="global-properties"/>
+  </bean>
+
+  <bean id="alfdockia.agents.licenseService"
+        class="com.cparedesr.alfdockia.agents.service.license.SignedLicenseService">
+    <property name="globalProperties" ref="global-properties"/>
+  </bean>
+
+  <bean id="alfdockia.agents.deploymentService"
+        class="com.cparedesr.alfdockia.agents.service.AgentDeploymentService">
+    <property name="dockerService" ref="alfdockia.agents.dockerService"/>
+    <property name="registryService" ref="alfdockia.agents.registryService"/>
+    <property name="containerSpecFactory" ref="alfdockia.agents.containerSpecFactory"/>
+    <property name="licenseService" ref="alfdockia.agents.licenseService"/>
+  </bean>
+
+  <bean id="alfdockia.agents.containerSpecFactory"
+        class="com.cparedesr.alfdockia.agents.service.AgentContainerSpecFactory">
+    <property name="secretsService" ref="alfdockia.agents.secretsService"/>
+  </bean>
+
+  <bean id="alfdockia.agents.folderService"
+        class="com.cparedesr.alfdockia.agents.service.repo.impl.AlfrescoFolderServiceImpl">
+    <property name="nodeService" ref="NodeService"/>
+    <property name="searchService" ref="SearchService"/>
+    <property name="fileFolderService" ref="FileFolderService"/>
+  </bean>
+
+  <bean id="alfdockia.agents.registryService"
+        class="com.cparedesr.alfdockia.agents.service.registry.impl.AgentRegistryRepoService">
+    <property name="nodeService" ref="NodeService"/>
+    <property name="searchService" ref="SearchService"/>
+    <property name="fileFolderService" ref="FileFolderService"/>
+    <property name="contentService" ref="ContentService"/>
+  </bean>
+
+  <bean id="alfdockia.agents.secretsService"
+        class="com.cparedesr.alfdockia.agents.service.secrets.impl.PropertySecretsService">
+    <property name="globalProperties" ref="global-properties"/>
+  </bean>
+
+  <bean id="alfdockia.agents.dockerService"
+        class="com.cparedesr.alfdockia.agents.service.docker.impl.DockerSocketCliServiceImpl">
+    <property name="globalProperties" ref="global-properties"/>
+  </bean>
+
+  <bean id="alfdockia.agents.deleteService"
+        class="com.cparedesr.alfdockia.agents.service.AgentDeleteService">
+    <property name="registryService" ref="alfdockia.agents.registryService"/>
+    <property name="dockerService" ref="alfdockia.agents.dockerService"/>
+    <property name="globalProperties" ref="global-properties"/>
+  </bean>
+
+  <bean id="alfdockia.agents.runtimeControlService"
+        class="com.cparedesr.alfdockia.agents.service.AgentRuntimeControlService">
+    <property name="registryService" ref="alfdockia.agents.registryService"/>
+    <property name="dockerService" ref="alfdockia.agents.dockerService"/>
+    <property name="validationService" ref="alfdockia.agents.validationService"/>
+    <property name="containerSpecFactory" ref="alfdockia.agents.containerSpecFactory"/>
+    <property name="globalProperties" ref="global-properties"/>
+  </bean>
+
+  <bean id="alfdockia.agents.subsystemLifecycleService"
+        class="com.cparedesr.alfdockia.agents.service.subsystem.AgentSubsystemLifecycleService"
+        init-method="start"
+        destroy-method="stop">
+    <property name="registryService" ref="alfdockia.agents.registryService"/>
+    <property name="dockerService" ref="alfdockia.agents.dockerService"/>
+    <property name="globalProperties" ref="global-properties"/>
+  </bean>
+
+</beans>

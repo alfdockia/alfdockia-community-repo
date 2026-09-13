@@ -1,0 +1,9 @@
+<webscript>
+  <shortname>alf-docia-alfdockia-restart</shortname>
+  <description>Recrea un agente Alfdockia con configuracion actualizada</description>
+  <url>/api/-default-/public/alfdockia/versions/1/agents/{id}/restart</url>
+  <format default="json">argument</format>
+  <authentication>user</authentication>
+  <transaction>required</transaction>
+  <family>alfdockia</family>
+</webscript>

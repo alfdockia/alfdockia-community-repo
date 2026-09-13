@@ -1,0 +1,9 @@
+<webscript>
+  <shortname>dockia-alfdockia-license-status</shortname>
+  <description>Consulta la edicion y licencia efectiva de AlfDokia</description>
+  <url>/api/-default-/public/alfdockia/versions/1/license</url>
+  <format default="json">argument</format>
+  <authentication>user</authentication>
+  <transaction>required</transaction>
+  <family>alfdockia</family>
+</webscript>

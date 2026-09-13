@@ -1,0 +1,34 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+
+  Contexto principal del modulo. Importa el modelo, registra el subsistema
+  Alfdockia y publica los Web Scripts que lo consumen.
+-->
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+          http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+
+    <import resource="classpath:alfresco/module/${project.artifactId}/context/alfdockia-model-context.xml" />
+
+    <bean id="alfdockia.agents.subsystem"
+          class="org.alfresco.repo.management.subsystems.ChildApplicationContextFactory"
+          parent="abstractPropertyBackedBean">
+        <property name="category" value="Alfdockia" />
+        <property name="typeName" value="default" />
+        <property name="instancePath">
+            <list>
+                <value>default</value>
+            </list>
+        </property>
+        <property name="autoStart" value="${alfresco.alfdockia.subsystem.autoStart:true}" />
+    </bean>
+
+    <bean id="alfdockia.agents.subsystemServiceLocator"
+          class="com.cparedesr.alfdockia.agents.service.subsystem.AgentSubsystemServiceLocator">
+        <property name="applicationContextFactory" ref="alfdockia.agents.subsystem" />
+    </bean>
+
+    <import resource="classpath:alfresco/module/${project.artifactId}/context/alfdockia-webscripts-context.xml" />
+
+</beans>

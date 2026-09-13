@@ -1,0 +1,8 @@
+# Directorios de compilacion en cualquier nivel.
+target/
+Target/
+
+# Herramienta privada de generacion de licencias y sus archivos.
+/tools/license/
+*.private.pem
+*.license.json
